@@ -1,6 +1,6 @@
-# EVALUGIT
+# EvaluaGit
 
-EVALUGIT es una plataforma web para analisis academico de repositorios Git.
+EvaluaGit es una plataforma web para analisis academico de repositorios Git.
 
 El objetivo del proyecto es ayudar a profesores a revisar proyectos de programacion de forma mas simple, automatizando revisiones basicas sobre estructura, actividad Git, requerimientos y similitud entre repositorios.
 
