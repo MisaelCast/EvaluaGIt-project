@@ -10,6 +10,7 @@ from app.db.base import Base
 class UserRole(str, PyEnum):
     """Roles de usuario soportados en la plataforma."""
 
+    ADMIN = "ADMIN"
     PROFESSOR = "PROFESSOR"
     STUDENT = "STUDENT"
 

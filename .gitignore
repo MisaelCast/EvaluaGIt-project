@@ -3,6 +3,7 @@ dist/
 .venv/
 __pycache__/
 .env
+backend/.env
 .DS_Store
 CONTEX.md
 docs/
