@@ -2,19 +2,15 @@ import os
 import sys
 from logging.config import fileConfig
 
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
-# Cargar variables de entorno desde .env
-# Se asume que alembic se ejecuta desde backend/
-load_dotenv()
 
 # Asegurar que el directorio raíz del backend esté en sys.path
 # para poder importar app.db.base y app.models
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.core.config import DATABASE_URL  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.models.user import User  # noqa: E402, F401
 
@@ -30,11 +26,6 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
-
-# Leer DATABASE_URL desde variables de entorno
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL is None:
-    raise RuntimeError("DATABASE_URL no está configurada en las variables de entorno")
 
 
 def run_migrations_offline() -> None:

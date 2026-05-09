@@ -25,6 +25,11 @@ class User(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
+    supabase_id = Column(
+        String,
+        unique=True,
+        nullable=False,
+    )
     email = Column(String, unique=True, nullable=False)
     full_name = Column(String, nullable=False)
     avatar_url = Column(String, nullable=True)
