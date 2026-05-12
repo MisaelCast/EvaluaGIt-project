@@ -10,10 +10,9 @@ from app.models.user import User
 security = HTTPBearer()
 
 
-def get_current_user(
+def get_token_payload(
     credentials: HTTPAuthorizationCredentials = Security(security),
-    db: Session = Depends(get_db),
-) -> User:
+) -> dict:
     token = credentials.credentials
 
     if not token:
@@ -31,6 +30,13 @@ def get_current_user(
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+    return payload
+
+
+def get_current_user(
+    payload: dict = Depends(get_token_payload),
+    db: Session = Depends(get_db),
+) -> User:
     supabase_id = payload.get("sub")
     if not supabase_id:
         raise HTTPException(status_code=401, detail="Token sin identidad de usuario")
