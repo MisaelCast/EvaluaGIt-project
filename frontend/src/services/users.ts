@@ -1,17 +1,11 @@
 import type { User } from '@supabase/supabase-js'
 
-const API_URL = import.meta.env.VITE_API_URL
-
-if (!API_URL) {
-  throw new Error('VITE_API_URL no está configurada')
-}
+import { API_URL, getAuthHeaders } from './api'
 
 export async function syncUser(user: User): Promise<void> {
   const response = await fetch(`${API_URL}/auth/sync-user`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: await getAuthHeaders(),
     body: JSON.stringify({
       supabase_id: user.id,
       email: user.email,

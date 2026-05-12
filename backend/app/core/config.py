@@ -19,3 +19,7 @@ if SUPABASE_ANON_KEY is None:
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 if SUPABASE_SERVICE_ROLE_KEY is None:
     raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY no está configurada")
+
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+if SUPABASE_JWT_SECRET is None:
+    raise RuntimeError("SUPABASE_JWT_SECRET no está configurada")
