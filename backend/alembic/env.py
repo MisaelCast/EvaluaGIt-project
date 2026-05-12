@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.config import DATABASE_URL  # noqa: E402
 from app.db.base import Base  # noqa: E402
+from app.models.analysis_run import AnalysisRun  # noqa: E402, F401
 from app.models.project import Project  # noqa: E402, F401
 from app.models.repository import Repository  # noqa: E402, F401
 from app.models.user import User  # noqa: E402, F401
