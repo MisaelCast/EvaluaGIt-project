@@ -5,18 +5,22 @@ import type { User } from '@supabase/supabase-js'
 import { getHealth, type HealthResponse } from '@/services/api'
 import { getCurrentUser, signInWithGoogle, signOut } from '@/services/auth'
 
+// ── Estado reactivo ─────────────────────────────────────────
 const loading = ref(true)
 const healthError = ref('')
 const health = ref<HealthResponse | null>(null)
 const user = ref<User | null>(null)
 
+// ── Carga inicial ──────────────────────────────────────────
 onMounted(async () => {
+  // Verifica conexión con el backend
   try {
     health.value = await getHealth()
   } catch (err) {
     healthError.value = err instanceof Error ? err.message : 'Error desconocido'
   }
 
+  // Restaura sesión de usuario si ya está autenticado
   try {
     user.value = await getCurrentUser()
   } catch {
@@ -26,6 +30,7 @@ onMounted(async () => {
   }
 })
 
+// ── Handlers de autenticación ──────────────────────────────
 async function handleSignIn() {
   try {
     await signInWithGoogle()
@@ -47,6 +52,7 @@ async function handleSignOut() {
 <template>
   <section class="home">
     <h1>EVALUGIT</h1>
+
     <p v-if="loading">Conectando con el backend...</p>
     <p v-else-if="healthError && !health">Backend status: error</p>
     <p v-else>Backend status: conectado</p>

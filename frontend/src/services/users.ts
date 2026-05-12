@@ -2,6 +2,11 @@ import type { User } from '@supabase/supabase-js'
 
 import { API_URL, getAuthHeaders } from './api'
 
+/**
+ * Sincroniza el usuario autenticado en Supabase con la base de datos
+ * local del backend. Se llama típicamente después del login exitoso.
+ * Requiere token JWT válido; el backend extrae la identidad del token.
+ */
 export async function syncUser(user: User): Promise<void> {
   const response = await fetch(`${API_URL}/auth/sync-user`, {
     method: 'POST',

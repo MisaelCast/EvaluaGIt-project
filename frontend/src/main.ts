@@ -6,6 +6,12 @@ import router from './router'
 import { supabase } from './lib/supabase'
 import { syncUser } from './services/users'
 
+/**
+ * Listener global de cambios de estado de autenticación.
+ * Se registra ANTES de montar la aplicación para no perder
+ * el evento SIGNED_IN que ocurre inmediatamente después
+ * de un redirect OAuth de Google.
+ */
 supabase.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN') {
     const user = session?.user
