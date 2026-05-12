@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.db.auth import get_current_user
 from app.db.deps import get_db
 from app.models.user import User, UserRole
 from app.schemas.user import SyncUserRequest, UserResponse
@@ -47,10 +48,5 @@ def sync_user(body: SyncUserRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-def get_me(supabase_id: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.supabase_id == supabase_id).first()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-    return user
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
