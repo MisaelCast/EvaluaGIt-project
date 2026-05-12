@@ -13,6 +13,10 @@ security = HTTPBearer()
 def get_token_payload(
     credentials: HTTPAuthorizationCredentials = Security(security),
 ) -> dict:
+    """Valida el token JWT de Supabase y retorna el payload decodificado.
+
+    Lanza HTTPException 401 si el token falta, está expirado o es inválido.
+    """
     token = credentials.credentials
 
     if not token:
@@ -37,6 +41,10 @@ def get_current_user(
     payload: dict = Depends(get_token_payload),
     db: Session = Depends(get_db),
 ) -> User:
+    """Busca el usuario en la base de datos usando el supabase_id del JWT.
+
+    Lanza HTTPException 401 si el usuario no existe localmente.
+    """
     supabase_id = payload.get("sub")
     if not supabase_id:
         raise HTTPException(status_code=401, detail="Token sin identidad de usuario")

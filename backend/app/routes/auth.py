@@ -16,6 +16,11 @@ def sync_user(
     payload: dict = Depends(get_token_payload),
     db: Session = Depends(get_db),
 ):
+    """Crea o actualiza el usuario local a partir del JWT de Supabase.
+
+    La identidad (supabase_id y email) se extrae del token validado,
+    no del body. Solo full_name y avatar_url vienen del body.
+    """
     supabase_id = payload.get("sub")
     if not supabase_id:
         raise HTTPException(status_code=401, detail="Token sin identidad de usuario")
@@ -60,4 +65,5 @@ def sync_user(
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
+    """Retorna el perfil del usuario autenticado desde la base de datos local."""
     return current_user
