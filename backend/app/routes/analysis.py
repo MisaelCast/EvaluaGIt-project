@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,8 +12,9 @@ from app.models.project import Project
 from app.models.repository import Repository, RepositoryStatus
 from app.models.user import User, UserRole
 from app.schemas.analysis_run import AnalysisRunResponse
-from app.services.clone_service import CloneError, cleanup_repo, clone_repository
+from app.services.clone_service import cleanup_repo, clone_repository
 from app.services.repo_validator import validate_branch, validate_repo_url
+from app.services.structure_analyzer import analyze_structure
 
 router = APIRouter()
 
@@ -33,7 +34,6 @@ def analyze_repository(
     if not repo:
         raise HTTPException(status_code=404, detail="Repositorio no encontrado")
 
-    # ── Autorización ──────────────────────────────────────────────
     if current_user.role == UserRole.STUDENT and repo.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="No puedes analizar este repositorio")
 
@@ -45,15 +45,12 @@ def analyze_repository(
         if not project:
             raise HTTPException(status_code=403, detail="No puedes analizar este repositorio")
 
-    # ── Evitar análisis concurrente ───────────────────────────────
     if repo.status == RepositoryStatus.ANALYZING:
         raise HTTPException(status_code=409, detail="Ya hay un análisis en curso")
 
-    # ── Validaciones de seguridad ─────────────────────────────────
     validated_url = validate_repo_url(repo.repo_url)
     validated_branch = validate_branch(repo.branch)
 
-    # ── Crear registro de ejecución ───────────────────────────────
     analysis_run = AnalysisRun(
         repository_id=repo.id,
         status=AnalysisRunStatus.PENDING,
@@ -64,36 +61,44 @@ def analyze_repository(
     db.commit()
     db.refresh(analysis_run)
 
-    # ── Clonar y analizar ─────────────────────────────────────────
     repo_path: str | None = None
     try:
         repo_path = clone_repository(validated_url, validated_branch)
 
         analysis_run.status = AnalysisRunStatus.RUNNING
-        analysis_run.started_at = datetime.now(timezone.utc)
+        analysis_run.started_at = datetime.utcnow()
         db.commit()
 
-        # Leer commit hash del HEAD clonado
         cloned = git.Repo(repo_path)
         commit_hash = cloned.head.commit.hexsha
 
+        project = db.query(Project).filter(Project.id == repo.project_id).first()
+        if not project:
+            raise ValueError("Proyecto asociado no encontrado")
+
+        # Inicio del análisis estructural del repositorio clonado.
+        structure_result = analyze_structure(repo_path, project.requirements or {})
+
+        # Actualización de estados después de guardar el resultado estructural.
+        analysis_run.result_json = structure_result
         analysis_run.commit_hash = commit_hash
         repo.last_commit_hash = commit_hash
-        repo.last_analyzed_at = datetime.now(timezone.utc)
+        repo.last_analyzed_at = datetime.utcnow()
 
         analysis_run.status = AnalysisRunStatus.COMPLETED
-        analysis_run.finished_at = datetime.now(timezone.utc)
+        analysis_run.finished_at = datetime.utcnow()
         repo.status = RepositoryStatus.ANALYZED
 
         db.commit()
         db.refresh(analysis_run)
 
-    except (CloneError, Exception) as exc:
+    # Manejo de errores del clonado o del análisis estructural.
+    except Exception as exc:
         db.rollback()
 
         analysis_run.status = AnalysisRunStatus.FAILED
         analysis_run.error_message = str(exc)
-        analysis_run.finished_at = datetime.now(timezone.utc)
+        analysis_run.finished_at = datetime.utcnow()
         repo.status = RepositoryStatus.FAILED
 
         db.commit()
@@ -101,6 +106,7 @@ def analyze_repository(
 
         raise HTTPException(status_code=422, detail=str(exc))
     finally:
+        # Cleanup final para no dejar repositorios temporales en disco.
         if repo_path:
             cleanup_repo(repo_path)
 
