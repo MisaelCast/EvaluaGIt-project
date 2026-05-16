@@ -10,6 +10,10 @@ import {
   type ProjectResponse,
 } from "@/services/projects";
 import {
+  analyzeRepository,
+  type AnalysisRunResponse,
+} from "@/services/analysis";
+import {
   createRepository,
   deleteRepository,
   getProjectRepositories,
@@ -35,6 +39,10 @@ const repositoriesError = ref("");
 const creatingRepo = ref(false);
 const newRepoUrl = ref("");
 const newRepoBranch = ref("main");
+
+const analyzingRepositoryId = ref<string | null>(null);
+const analysisResult = ref<AnalysisRunResponse | null>(null);
+const analysisError = ref("");
 
 const backendStatus = computed(() => {
   if (loading.value) return "Cargando";
@@ -239,6 +247,23 @@ async function handleDeleteRepository(repo: RepositoryResponse) {
   } catch (err) {
     repositoriesError.value =
       err instanceof Error ? err.message : "No se pudo eliminar el repositorio";
+  }
+}
+
+async function handleAnalyze(repo: RepositoryResponse) {
+  analyzingRepositoryId.value = repo.id;
+  analysisError.value = "";
+  analysisResult.value = null;
+
+  try {
+    const result = await analyzeRepository(repo.id);
+    analysisResult.value = result;
+    await loadProjectRepositories();
+  } catch (err) {
+    analysisError.value =
+      err instanceof Error ? err.message : "No se pudo analizar el repositorio";
+  } finally {
+    analyzingRepositoryId.value = null;
   }
 }
 
@@ -469,6 +494,14 @@ function formatDate(value: string | null): string {
                 </div>
               </div>
               <button
+                class="button analyze-button"
+                type="button"
+                :disabled="analyzingRepositoryId === repo.id || repo.status === 'ANALYZING'"
+                @click="handleAnalyze(repo)"
+              >
+                {{ analyzingRepositoryId === repo.id || repo.status === 'ANALYZING' ? "Analizando..." : "Analizar" }}
+              </button>
+              <button
                 class="button danger-button"
                 type="button"
                 @click="handleDeleteRepository(repo)"
@@ -481,6 +514,32 @@ function formatDate(value: string | null): string {
           <p v-else-if="!repositoriesError" class="muted">
             Este proyecto aún no tiene repositorios vinculados.
           </p>
+
+          <div v-if="analysisResult || analysisError" class="analysis-result-section">
+            <h4>Resultado del último análisis</h4>
+
+            <p v-if="analysisError" class="error-text">{{ analysisError }}</p>
+
+            <div v-if="analysisResult" class="analysis-data">
+              <div class="analysis-info">
+                <span><strong>Status:</strong> {{ analysisResult.status }}</span>
+                <span v-if="analysisResult.commit_hash">
+                  <strong>Commit:</strong> {{ analysisResult.commit_hash.substring(0, 7) }}
+                </span>
+                <span v-if="analysisResult.started_at">
+                  <strong>Iniciado:</strong> {{ formatDate(analysisResult.started_at) }}
+                </span>
+                <span v-if="analysisResult.finished_at">
+                  <strong>Finalizado:</strong> {{ formatDate(analysisResult.finished_at) }}
+                </span>
+                <span v-if="analysisResult.error_message" class="error-text">
+                  <strong>Error:</strong> {{ analysisResult.error_message }}
+                </span>
+              </div>
+
+              <pre v-if="analysisResult.result_json" class="result-json">{{ JSON.stringify(analysisResult.result_json, null, 2) }}</pre>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -840,6 +899,49 @@ h2 {
   background: #f8cdcd;
 }
 
+.analyze-button {
+  background: #e3f5eb;
+  color: #17633d;
+  flex-shrink: 0;
+}
+
+.analyze-button:hover:not(:disabled) {
+  background: #cce9db;
+}
+
+.analysis-result-section {
+  margin-top: 24px;
+  padding: 16px;
+  background: #fbfcfb;
+  border: 1px solid #dfe6e1;
+  border-radius: 8px;
+}
+
+.analysis-result-section h4 {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+}
+
+.analysis-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-bottom: 14px;
+  font-size: 0.88rem;
+  color: #4b5650;
+}
+
+.result-json {
+  margin: 0;
+  padding: 14px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
 @media (max-width: 760px) {
   .page {
     padding: 28px 18px;
@@ -889,6 +991,10 @@ h2 {
 
   .repo-card {
     flex-direction: column;
+  }
+
+  .repo-card .button {
+    width: 100%;
   }
 
   .danger-button {
