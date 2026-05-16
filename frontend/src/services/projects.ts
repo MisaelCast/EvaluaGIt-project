@@ -51,6 +51,24 @@ export async function getProjects(): Promise<ProjectResponse[]> {
   return response.json()
 }
 
+export async function getProject(projectId: string): Promise<ProjectResponse> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesión para ver los detalles del proyecto')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}`, {
+    headers,
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
 export async function createProject(data: ProjectCreate): Promise<ProjectResponse> {
   const headers = await getAuthHeaders()
 
