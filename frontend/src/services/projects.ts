@@ -1,0 +1,60 @@
+import { API_URL, getAuthHeaders } from '@/services/api'
+
+export type ProjectRequirements = Record<string, unknown> | unknown[] | null
+
+export type ProjectResponse = {
+  id: string
+  professor_id: string
+  name: string
+  description: string | null
+  requirements: ProjectRequirements
+  due_date: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ProjectCreate = {
+  name: string
+  description: string | null
+  requirements: ProjectRequirements
+  due_date: string | null
+}
+
+async function parseApiError(response: Response): Promise<string> {
+  try {
+    const body = await response.json()
+    if (typeof body.detail === 'string') {
+      return body.detail
+    }
+  } catch {
+    // Si el backend no devuelve JSON, usamos un mensaje genérico.
+  }
+
+  return 'No se pudo completar la solicitud'
+}
+
+export async function getProjects(): Promise<ProjectResponse[]> {
+  const response = await fetch(`${API_URL}/projects`, {
+    headers: await getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
+export async function createProject(data: ProjectCreate): Promise<ProjectResponse> {
+  const response = await fetch(`${API_URL}/projects`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}

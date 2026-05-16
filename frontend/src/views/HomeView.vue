@@ -4,12 +4,19 @@ import type { User } from '@supabase/supabase-js'
 
 import { getHealth, type HealthResponse } from '@/services/api'
 import { getCurrentUser, signInWithGoogle, signOut } from '@/services/auth'
+import { createProject, getProjects, type ProjectResponse } from '@/services/projects'
 
 const loading = ref(true)
 const healthError = ref('')
 const health = ref<HealthResponse | null>(null)
 const user = ref<User | null>(null)
 const authError = ref('')
+const projects = ref<ProjectResponse[]>([])
+const projectsLoading = ref(false)
+const projectsError = ref('')
+const creatingProject = ref(false)
+const newProjectName = ref('')
+const newProjectDescription = ref('')
 
 const backendStatus = computed(() => {
   if (loading.value) return 'Cargando'
@@ -31,6 +38,7 @@ onMounted(async () => {
   loading.value = true
   healthError.value = ''
   authError.value = ''
+  projectsError.value = ''
 
   try {
     health.value = await getHealth()
@@ -42,6 +50,9 @@ onMounted(async () => {
   // Restaura la sesión para mostrar el estado real al volver desde Supabase.
   try {
     user.value = await getCurrentUser()
+    if (user.value) {
+      await loadProjects()
+    }
   } catch (err) {
     authError.value = err instanceof Error ? err.message : 'No se pudo revisar la sesión'
     user.value = null
@@ -49,6 +60,20 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function loadProjects() {
+  projectsLoading.value = true
+  projectsError.value = ''
+
+  try {
+    projects.value = await getProjects()
+  } catch (err) {
+    projects.value = []
+    projectsError.value = err instanceof Error ? err.message : 'No se pudieron cargar los proyectos'
+  } finally {
+    projectsLoading.value = false
+  }
+}
 
 async function handleSignIn() {
   authError.value = ''
@@ -66,9 +91,48 @@ async function handleSignOut() {
   try {
     await signOut()
     user.value = null
+    projects.value = []
+    projectsError.value = ''
   } catch (err) {
     authError.value = err instanceof Error ? err.message : 'Error al cerrar sesión'
   }
+}
+
+async function handleCreateProject() {
+  const name = newProjectName.value.trim()
+  const description = newProjectDescription.value.trim()
+
+  if (!name) {
+    projectsError.value = 'El nombre del proyecto es obligatorio'
+    return
+  }
+
+  creatingProject.value = true
+  projectsError.value = ''
+
+  try {
+    await createProject({
+      name,
+      description: description || null,
+      requirements: {},
+      due_date: null,
+    })
+    newProjectName.value = ''
+    newProjectDescription.value = ''
+    await loadProjects()
+  } catch (err) {
+    projectsError.value = err instanceof Error ? err.message : 'No se pudo crear el proyecto'
+  } finally {
+    creatingProject.value = false
+  }
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return 'Sin fecha'
+
+  return new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'medium',
+  }).format(new Date(value))
 }
 </script>
 
@@ -129,11 +193,55 @@ async function handleSignOut() {
 
     <section class="card main-area">
       <div class="section-title">
-        <h2>Área principal</h2>
+        <h2>Mis proyectos</h2>
       </div>
-      <p class="muted">
-        Este espacio queda listo para probar próximos flujos de proyectos, repositorios y análisis.
-      </p>
+
+      <p v-if="!user" class="muted">Inicia sesión para ver tus proyectos.</p>
+
+      <div v-else class="projects-content">
+        <form class="project-form" @submit.prevent="handleCreateProject">
+          <div class="form-grid">
+            <label class="field">
+              <span>Nombre del proyecto</span>
+              <input
+                v-model="newProjectName"
+                type="text"
+                placeholder="Proyecto final"
+                autocomplete="off"
+              />
+            </label>
+
+            <label class="field">
+              <span>Descripción</span>
+              <textarea
+                v-model="newProjectDescription"
+                rows="3"
+                placeholder="Breve descripción del proyecto"
+              />
+            </label>
+          </div>
+
+          <button class="button primary" type="submit" :disabled="creatingProject">
+            {{ creatingProject ? 'Creando...' : 'Crear proyecto' }}
+          </button>
+        </form>
+
+        <p v-if="projectsError" class="error-text">{{ projectsError }}</p>
+        <p v-if="projectsLoading" class="muted">Cargando proyectos...</p>
+
+        <div v-else-if="projects.length" class="projects-list">
+          <article v-for="project in projects" :key="project.id" class="project-card">
+            <h3>{{ project.name }}</h3>
+            <p class="muted">{{ project.description || 'Sin descripción' }}</p>
+            <div class="project-meta">
+              <span>Entrega: {{ formatDate(project.due_date) }}</span>
+              <span>Creado: {{ formatDate(project.created_at) }}</span>
+            </div>
+          </article>
+        </div>
+
+        <p v-else-if="!projectsError" class="muted">Aún no tienes proyectos.</p>
+      </div>
     </section>
   </main>
 </template>
@@ -268,6 +376,11 @@ h2 {
   cursor: pointer;
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .button.primary {
   background: #2f8f5b;
   color: #ffffff;
@@ -287,6 +400,79 @@ h2 {
   margin: 18px auto 0;
 }
 
+.projects-content {
+  display: grid;
+  gap: 18px;
+}
+
+.project-form {
+  display: grid;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #dfe6e1;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  color: #4b5650;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cfd8d2;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #17201b;
+  font: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: #2f8f5b;
+  outline: 2px solid #d9f0e4;
+}
+
+.projects-list {
+  display: grid;
+  gap: 12px;
+}
+
+.project-card {
+  border: 1px solid #dfe6e1;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfb;
+}
+
+.project-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 14px;
+  color: #6c7770;
+  font-size: 0.86rem;
+}
+
 @media (max-width: 760px) {
   .page {
     padding: 28px 18px;
@@ -299,6 +485,10 @@ h2 {
   .session-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 
   h1 {
