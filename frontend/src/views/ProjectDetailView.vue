@@ -158,6 +158,12 @@ function formatDate(value: string | null): string {
     <section class="card">
       <div class="section-title">
         <h2>Repositorios</h2>
+        <RouterLink
+          :to="`/projects/${projectId}/settings`"
+          class="settings-link"
+        >
+          Configurar requerimientos
+        </RouterLink>
       </div>
 
       <form class="repo-form" @submit.prevent="handleCreateRepository">
@@ -331,12 +337,26 @@ h1 {
 }
 
 .section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 18px;
 }
 
 .section-title h2 {
   margin: 0;
   font-size: 1.05rem;
+}
+
+.settings-link {
+  color: #2f8f5b;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.settings-link:hover {
+  text-decoration: underline;
 }
 
 .repo-form {

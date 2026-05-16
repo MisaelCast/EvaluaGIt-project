@@ -1,6 +1,11 @@
 import { API_URL, fetchWithTimeout, getAuthHeaders } from '@/services/api'
 
-export type ProjectRequirements = Record<string, unknown> | unknown[] | null
+export type ProjectRequirements = {
+  requiredFiles: string[]
+  forbiddenFiles: string[]
+  requiredFeatures: string[]
+  minimumCommits: number
+}
 
 export type ProjectResponse = {
   id: string
@@ -18,6 +23,13 @@ export type ProjectCreate = {
   description: string | null
   requirements: ProjectRequirements
   due_date: string | null
+}
+
+export type ProjectUpdate = {
+  name?: string
+  description?: string | null
+  requirements?: ProjectRequirements
+  due_date?: string | null
 }
 
 async function parseApiError(response: Response): Promise<string> {
@@ -78,6 +90,26 @@ export async function createProject(data: ProjectCreate): Promise<ProjectRespons
 
   const response = await fetchWithTimeout(`${API_URL}/projects`, {
     method: 'POST',
+    headers,
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
+export async function updateProject(projectId: string, data: ProjectUpdate): Promise<ProjectResponse> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesión para editar proyectos')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}`, {
+    method: 'PATCH',
     headers,
     body: JSON.stringify(data),
   })

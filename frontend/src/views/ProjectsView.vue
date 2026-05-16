@@ -45,7 +45,12 @@ async function handleCreateProject() {
     await createProject({
       name,
       description: description || null,
-      requirements: {},
+      requirements: {
+        requiredFiles: [],
+        forbiddenFiles: [],
+        requiredFeatures: [],
+        minimumCommits: 0,
+      },
       due_date: null,
     })
     newProjectName.value = ''
