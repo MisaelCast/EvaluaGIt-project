@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { User } from '@supabase/supabase-js'
 
 /**
  * Inicia el flujo de autenticación OAuth con Google.
@@ -30,12 +31,12 @@ export async function signOut(): Promise<void> {
  * Consulta si existe un usuario autenticado en la sesión actual.
  * Útil para restaurar el estado de auth al cargar la página.
  */
-export async function getCurrentUser() {
-  const { data, error } = await supabase.auth.getUser()
+export async function getCurrentUser(): Promise<User | null> {
+  const { data, error } = await supabase.auth.getSession()
 
   if (error) {
     throw new Error(error.message)
   }
 
-  return data.user
+  return data.session?.user ?? null
 }

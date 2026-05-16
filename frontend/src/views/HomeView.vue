@@ -34,32 +34,42 @@ const displayName = computed(() => {
   return user.value?.user_metadata?.full_name || user.value?.email || 'Usuario autenticado'
 })
 
-onMounted(async () => {
+onMounted(() => {
+  void loadInitialData()
+})
+
+async function loadInitialData() {
   loading.value = true
   healthError.value = ''
   authError.value = ''
   projectsError.value = ''
+  health.value = null
+  user.value = null
+  projects.value = []
 
   try {
-    health.value = await getHealth()
-  } catch (err) {
-    healthError.value = err instanceof Error ? err.message : 'Error desconocido'
-    health.value = null
-  }
-
-  // Restaura la sesión para mostrar el estado real al volver desde Supabase.
-  try {
-    user.value = await getCurrentUser()
-    if (user.value) {
-      await loadProjects()
+    try {
+      health.value = await getHealth()
+    } catch (err) {
+      healthError.value = err instanceof Error ? err.message : 'Error desconocido'
+      health.value = null
     }
-  } catch (err) {
-    authError.value = err instanceof Error ? err.message : 'No se pudo revisar la sesión'
-    user.value = null
+
+    try {
+      user.value = await getCurrentUser()
+    } catch (err) {
+      authError.value = err instanceof Error ? err.message : 'No se pudo revisar la sesión'
+      user.value = null
+    }
+
   } finally {
     loading.value = false
   }
-})
+
+  if (user.value) {
+    void loadProjects()
+  }
+}
 
 async function loadProjects() {
   projectsLoading.value = true

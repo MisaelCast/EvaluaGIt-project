@@ -40,7 +40,7 @@ def sync_user(
             email=email,
             full_name=body.full_name,
             avatar_url=body.avatar_url,
-            role=UserRole.STUDENT,
+            role=UserRole.PROFESSOR,
         )
         db.add(user)
 

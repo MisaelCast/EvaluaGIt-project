@@ -1,4 +1,4 @@
-import { API_URL, getAuthHeaders } from '@/services/api'
+import { API_URL, fetchWithTimeout, getAuthHeaders } from '@/services/api'
 
 export type ProjectRequirements = Record<string, unknown> | unknown[] | null
 
@@ -34,8 +34,14 @@ async function parseApiError(response: Response): Promise<string> {
 }
 
 export async function getProjects(): Promise<ProjectResponse[]> {
-  const response = await fetch(`${API_URL}/projects`, {
-    headers: await getAuthHeaders(),
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesión para ver tus proyectos')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects`, {
+    headers,
   })
 
   if (!response.ok) {
@@ -46,9 +52,15 @@ export async function getProjects(): Promise<ProjectResponse[]> {
 }
 
 export async function createProject(data: ProjectCreate): Promise<ProjectResponse> {
-  const response = await fetch(`${API_URL}/projects`, {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesión para crear proyectos')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects`, {
     method: 'POST',
-    headers: await getAuthHeaders(),
+    headers,
     body: JSON.stringify(data),
   })
 

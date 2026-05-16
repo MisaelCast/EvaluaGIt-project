@@ -12,15 +12,15 @@ import { syncUser } from './services/users'
  * el evento SIGNED_IN que ocurre inmediatamente después
  * de un redirect OAuth de Google.
  */
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN') {
     const user = session?.user
-    if (user) {
-      try {
-        await syncUser(user)
-      } catch (err) {
-        console.error('Error al sincronizar usuario:', err)
-      }
+    const token = session?.access_token
+
+    if (user && token) {
+      setTimeout(() => {
+        void syncUser(user, token).catch(() => undefined)
+      }, 0)
     }
   }
 })
