@@ -16,4 +16,3 @@ class AnalysisRunResponse(BaseModel):
     result_json: list | dict | None
     error_message: str | None
     created_at: datetime
-    updated_at: datetime
