@@ -51,3 +51,25 @@ export async function analyzeRepository(repositoryId: string): Promise<AnalysisR
 
   return response.json()
 }
+
+export async function getAnalysisRun(analysisRunId: string): Promise<AnalysisRunResponse> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesión para ver el análisis')
+  }
+
+  const response = await fetchWithTimeout(
+    `${API_URL}/analysis-runs/${analysisRunId}`,
+    {
+      headers,
+    },
+  )
+
+  if (!response.ok) {
+    const error = await parseApiError(response)
+    throw new Error(error)
+  }
+
+  return response.json()
+}

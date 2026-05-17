@@ -5,6 +5,7 @@ import App from './App.vue'
 import router from './router'
 import { supabase } from './lib/supabase'
 import { syncUser } from './services/users'
+import './assets/main.css'
 
 /**
  * Listener global de cambios de estado de autenticación.
