@@ -15,6 +15,7 @@ from app.schemas.analysis_run import AnalysisRunResponse
 from app.services.clone_service import cleanup_repo, clone_repository
 from app.services.repo_validator import validate_branch, validate_repo_url
 from app.services.structure_analyzer import analyze_structure
+from app.services.git_analyzer import analyze_git_history
 
 router = APIRouter()
 
@@ -37,13 +38,16 @@ def analyze_repository(
     if current_user.role == UserRole.STUDENT and repo.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="No puedes analizar este repositorio")
 
-    if current_user.role in (UserRole.PROFESSOR, UserRole.ADMIN):
+    if current_user.role in (UserRole.PROFESSOR,):
         project = db.query(Project).filter(
             Project.id == repo.project_id,
             Project.professor_id == current_user.id,
         ).first()
         if not project:
             raise HTTPException(status_code=403, detail="No puedes analizar este repositorio")
+
+    if current_user.role == UserRole.ADMIN:
+        pass
 
     if repo.status == RepositoryStatus.ANALYZING:
         raise HTTPException(status_code=409, detail="Ya hay un análisis en curso")
@@ -79,8 +83,32 @@ def analyze_repository(
         # Inicio del análisis estructural del repositorio clonado.
         structure_result = analyze_structure(repo_path, project.requirements or {})
 
-        # Actualización de estados después de guardar el resultado estructural.
-        analysis_run.result_json = structure_result
+        # Análisis del historial de commits del repositorio.
+        git_result = analyze_git_history(repo_path, project.requirements or {})
+
+        # Construcción del result_json combinado con estructura, git y resumen.
+        analysis_run.result_json = {
+            "language": structure_result["language"],
+            "framework": structure_result["framework"],
+            "dependencies": structure_result["dependencies"],
+            "has_readme": structure_result["has_readme"],
+            "required_files": structure_result["required_files"],
+            "forbidden_files": structure_result["forbidden_files"],
+            "score": structure_result["score"],
+            "structure": structure_result,
+            "git": git_result,
+            "summary": {
+                "language": structure_result["language"],
+                "framework": structure_result["framework"],
+                "structure_score": structure_result["score"]["structure"],
+                "total_commits": git_result["total_commits"],
+                "minimum_commits_passed": git_result["minimum_commits"]["passed"],
+            },
+            "warnings": [
+                *structure_result["warnings"],
+                *git_result["warnings"],
+            ],
+        }
         analysis_run.commit_hash = commit_hash
         repo.last_commit_hash = commit_hash
         repo.last_analyzed_at = datetime.utcnow()
