@@ -69,3 +69,25 @@ export async function getHealth(): Promise<HealthResponse> {
 
   return response.json()
 }
+
+export type MeResponse = {
+  id: string
+  supabase_id: string
+  email: string
+  full_name: string
+  avatar_url: string | null
+  role: string
+}
+
+export async function getMe(): Promise<MeResponse> {
+  const headers = await getAuthHeaders()
+  const response = await fetchWithTimeout(`${API_URL}/auth/me`, {
+    headers,
+  })
+
+  if (!response.ok) {
+    throw new Error('No se pudo obtener información del usuario')
+  }
+
+  return response.json()
+}

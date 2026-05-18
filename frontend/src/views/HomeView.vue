@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import type { User } from '@supabase/supabase-js'
 
-import { getHealth, type HealthResponse } from '@/services/api'
+import { supabase } from '@/lib/supabase'
+import { getHealth, type HealthResponse, getMe } from '@/services/api'
 import { getCurrentUser, signInWithGoogle, signOut } from '@/services/auth'
+import { syncUser } from '@/services/users'
 
+const router = useRouter()
 const loading = ref(true)
 const healthError = ref('')
 const health = ref<HealthResponse | null>(null)
@@ -50,11 +53,27 @@ async function loadInitialData() {
       health.value = null
     }
 
-    try {
-      user.value = await getCurrentUser()
-    } catch {
-      user.value = null
-    }
+try {
+        user.value = await getCurrentUser()
+        if (user.value) {
+          const { data: sessionData } = await supabase.auth.getSession()
+          const token = sessionData?.session?.access_token
+          if (token) {
+            await syncUser(user.value, token)
+            const me = await getMe()
+            if (me.role === 'UNASSIGNED') {
+              router.push('/onboarding')
+              return
+            }
+            if (me.role === 'STUDENT') {
+              router.push('/student/dashboard')
+              return
+            }
+          }
+        }
+      } catch {
+        user.value = null
+      }
   } finally {
     loading.value = false
   }

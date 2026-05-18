@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 
-import { API_URL, fetchWithTimeout } from './api'
+import { API_URL, fetchWithTimeout, getAuthHeaders } from './api'
 
 /**
  * Sincroniza el usuario autenticado en Supabase con la base de datos
@@ -24,5 +24,22 @@ export async function syncUser(user: User, accessToken: string): Promise<void> {
 
   if (!response.ok) {
     throw new Error('Error al sincronizar usuario')
+  }
+}
+
+export async function updateMyRole(role: 'PROFESSOR' | 'STUDENT'): Promise<void> {
+  const headers = await getAuthHeaders()
+  const response = await fetchWithTimeout(`${API_URL}/auth/me/role`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify({ role }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.detail || 'Error al actualizar el rol')
   }
 }

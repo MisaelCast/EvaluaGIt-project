@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.db.auth import get_current_user, get_token_payload
 from app.db.deps import get_db
 from app.models.user import User, UserRole
-from app.schemas.user import SyncUserRequest, UserResponse
+from app.schemas.user import SyncUserRequest, UpdateUserRoleRequest, UserResponse
 
 router = APIRouter()
 
@@ -40,7 +40,7 @@ def sync_user(
             email=email,
             full_name=body.full_name,
             avatar_url=body.avatar_url,
-            role=UserRole.PROFESSOR,
+            role=UserRole.UNASSIGNED,
         )
         db.add(user)
 
@@ -66,4 +66,29 @@ def sync_user(
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     """Retorna el perfil del usuario autenticado desde la base de datos local."""
+    return current_user
+
+
+@router.patch("/me/role", response_model=UserResponse)
+def update_my_role(
+    body: UpdateUserRoleRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Permite al usuario elegir su rol (PROFESSOR o STUDENT) si aún no tiene uno definido."""
+    if current_user.role != UserRole.UNASSIGNED:
+        raise HTTPException(
+            status_code=409,
+            detail="El rol del usuario ya fue definido",
+        )
+
+    if body.role not in ("PROFESSOR", "STUDENT"):
+        raise HTTPException(
+            status_code=400,
+            detail="Rol inválido. Solo se permite PROFESSOR o STUDENT",
+        )
+
+    current_user.role = UserRole(body.role)
+    db.commit()
+    db.refresh(current_user)
     return current_user

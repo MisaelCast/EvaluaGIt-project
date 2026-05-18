@@ -10,6 +10,10 @@ class SyncUserRequest(BaseModel):
     avatar_url: str | None = None
 
 
+class UpdateUserRoleRequest(BaseModel):
+    role: str
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
