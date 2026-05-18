@@ -74,6 +74,57 @@ function getScore(): number | null {
   if (!score) return null
   return score.structure as number | null
 }
+
+function getGit() {
+  if (!result.value) return null
+  const git = result.value.git
+  return typeof git === 'object' && git !== null ? git as Record<string, unknown> : null
+}
+
+function getGitCommits(): number {
+  const git = getGit()
+  if (!git) return 0
+  return typeof git.total_commits === 'number' ? git.total_commits : 0
+}
+
+function getMinCommitsRequired(): number {
+  const git = getGit()
+  if (!git) return 0
+  const min = git.minimum_commits
+  if (typeof min === 'object' && min !== null) {
+    return typeof (min as Record<string, unknown>).required === 'number' ? (min as Record<string, unknown>).required as number : 0
+  }
+  return 0
+}
+
+function getMinCommitsPassed(): boolean {
+  const git = getGit()
+  if (!git) return true
+  const min = git.minimum_commits
+  if (typeof min === 'object' && min !== null) {
+    return typeof (min as Record<string, unknown>).passed === 'boolean' ? (min as Record<string, unknown>).passed as boolean : true
+  }
+  return true
+}
+
+function getGitAuthors(): string[] {
+  const git = getGit()
+  if (!git) return []
+  return Array.isArray(git.authors) ? git.authors.filter((a) => typeof a === 'string') : []
+}
+
+function getLastCommit(): Record<string, unknown> | null {
+  const git = getGit()
+  if (!git) return null
+  const lc = git.last_commit
+  return typeof lc === 'object' && lc !== null ? (lc as Record<string, unknown>) : null
+}
+
+function getGitWarnings(): string[] {
+  const git = getGit()
+  if (!git) return []
+  return Array.isArray(git.warnings) ? git.warnings.filter((w) => typeof w === 'string') : []
+}
 </script>
 
 <template>
@@ -183,6 +234,73 @@ function getScore(): number | null {
               <li v-for="file in getForbiddenFiles()" :key="file">{{ file }}</li>
             </ul>
             <p v-else class="text-slate-500 text-sm">No se encontraron archivos prohibidos</p>
+          </div>
+
+          <div class="border-t border-slate-200 pt-6">
+            <h3 class="text-lg font-semibold mb-4">Historial Git</h3>
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="flex flex-col gap-1">
+                  <span class="text-xs font-semibold text-slate-500 uppercase">Total commits</span>
+                  <span class="text-sm font-medium">{{ getGitCommits() }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-xs font-semibold text-slate-500 uppercase">Minimo requerido</span>
+                  <span class="text-sm">{{ getMinCommitsRequired() > 0 ? getMinCommitsRequired() : 'Sin configurar' }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-xs font-semibold text-slate-500 uppercase">Cumple minimo</span>
+                  <span v-if="getMinCommitsRequired() > 0" :class="getMinCommitsPassed() ? 'text-emerald-700 font-medium' : 'text-red-600 font-medium'">
+                    {{ getMinCommitsPassed() ? 'Si' : 'No' }}
+                  </span>
+                  <span v-else class="text-slate-500 text-sm">N/A</span>
+                </div>
+                <div v-if="getMinCommitsRequired() > 0 && !getMinCommitsPassed()" class="flex flex-col gap-1">
+                  <span class="text-xs font-semibold text-slate-500 uppercase">Commits faltantes</span>
+                  <span class="text-sm text-red-600">{{ getMinCommitsRequired() - getGitCommits() }}</span>
+                </div>
+              </div>
+
+              <div v-if="getGitAuthors().length" class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Autores detectados</p>
+                <div class="flex flex-wrap gap-2">
+                  <span v-for="author in getGitAuthors()" :key="author" class="bg-slate-200 text-slate-700 px-2 py-1 rounded text-sm">
+                    {{ author }}
+                  </span>
+                </div>
+              </div>
+              <p v-else class="text-slate-500 text-sm">Sin autores detectados</p>
+
+              <div v-if="getLastCommit()" class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Ultimo commit</p>
+                <div class="space-y-1 text-sm">
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-500">Hash:</span>
+                    <span class="font-mono bg-slate-100 px-2 py-0.5 rounded text-xs">{{ String(getLastCommit()?.hash || '').substring(0, 7) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">Mensaje:</span>
+                    <span class="ml-2">{{ String(getLastCommit()?.message || 'Sin mensaje') }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">Autor:</span>
+                    <span class="ml-2">{{ String(getLastCommit()?.author || 'Desconocido') }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">Fecha:</span>
+                    <span class="ml-2">{{ formatDate(String(getLastCommit()?.date || '')) }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-slate-500 text-sm">Sin informacion del ultimo commit</p>
+
+              <div v-if="getGitWarnings().length" class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p class="text-xs font-semibold text-amber-700 uppercase mb-2">Advertencias Git</p>
+                <ul class="list-disc list-inside text-sm text-amber-700 space-y-1">
+                  <li v-for="w in getGitWarnings()" :key="w">{{ w }}</li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <div class="border-t border-slate-200 pt-6">

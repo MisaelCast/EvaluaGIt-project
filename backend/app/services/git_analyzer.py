@@ -1,7 +1,7 @@
 import git
 
 
-MAX_COMMITS = 200
+MAX_COMMITS = 100
 
 
 def analyze_git_history(repo_path: str, requirements: dict | None = None) -> dict:
