@@ -33,7 +33,7 @@ def clone_repository(repo_url: str, branch: str) -> str:
             url=repo_url,
             to_path=str(target_path),
             branch=branch,
-            depth=1,
+            depth=100,  # descargamos los commits más recientes para análisis, pero no todo el historial
             single_branch=True,
         )
 
