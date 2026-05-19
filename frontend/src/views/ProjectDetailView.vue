@@ -6,7 +6,6 @@ import {
   type AnalysisRunResponse,
 } from '@/services/analysis'
 import {
-  createRepository,
   deleteRepository,
   getProjectRepositories,
   type RepositoryWithStudent,
@@ -20,9 +19,6 @@ const project = ref<ProjectResponse | null>(null)
 const repositories = ref<RepositoryWithStudent[]>([])
 const repositoriesLoading = ref(false)
 const repositoriesError = ref('')
-const creatingRepo = ref(false)
-const newRepoUrl = ref('')
-const newRepoBranch = ref('main')
 
 const analyzingRepositoryId = ref<string | null>(null)
 const analysisResult = ref<AnalysisRunResponse | null>(null)
@@ -59,38 +55,9 @@ async function loadRepositories() {
   } catch (err) {
     repositories.value = []
     repositoriesError.value =
-      err instanceof Error ? err.message : 'No se pudieron cargar los repositorios'
+      err instanceof Error ? err.message : 'No se pudieron cargar las entregas'
   } finally {
     repositoriesLoading.value = false
-  }
-}
-
-async function handleCreateRepository() {
-  const repoUrl = newRepoUrl.value.trim()
-  const branch = newRepoBranch.value.trim() || 'main'
-
-  if (!repoUrl) {
-    repositoriesError.value = 'La URL del repositorio es obligatoria'
-    return
-  }
-
-  creatingRepo.value = true
-  repositoriesError.value = ''
-
-  try {
-    await createRepository({
-      project_id: projectId,
-      repo_url: repoUrl,
-      branch,
-    })
-    newRepoUrl.value = ''
-    newRepoBranch.value = 'main'
-    await loadRepositories()
-  } catch (err) {
-    repositoriesError.value =
-      err instanceof Error ? err.message : 'No se pudo vincular el repositorio'
-  } finally {
-    creatingRepo.value = false
   }
 }
 
@@ -162,6 +129,7 @@ function formatDate(value: string | null): string {
         <p v-if="project" class="project-name">{{ project.name }}</p>
         <p v-if="project?.join_code" class="join-code-display">
           Codigo para alumnos: <code>{{ project.join_code }}</code>
+          <span class="join-code-hint">Comparti este codigo con tus alumnos para que se unan al proyecto.</span>
         </p>
       </div>
       <RouterLink to="/projects" class="back-link">Volver a proyectos</RouterLink>
@@ -169,7 +137,7 @@ function formatDate(value: string | null): string {
 
     <section class="card">
       <div class="section-title">
-        <h2>Repositorios</h2>
+        <h2>Entregas</h2>
         <RouterLink
           :to="`/projects/${projectId}/settings`"
           class="settings-link"
@@ -178,39 +146,14 @@ function formatDate(value: string | null): string {
         </RouterLink>
       </div>
 
-      <form class="repo-form" @submit.prevent="handleCreateRepository">
-        <label class="field">
-          <span>URL del repositorio</span>
-          <input
-            v-model="newRepoUrl"
-            type="text"
-            placeholder="https://github.com/usuario/repositorio"
-            autocomplete="off"
-          />
-        </label>
-
-        <label class="field field-small">
-          <span>Rama</span>
-          <input
-            v-model="newRepoBranch"
-            type="text"
-            placeholder="main"
-            autocomplete="off"
-          />
-        </label>
-
-        <button class="button primary" type="submit" :disabled="creatingRepo">
-          {{ creatingRepo ? 'Vinculando...' : 'Vincular repositorio' }}
-        </button>
-      </form>
-
       <p v-if="repositoriesError" class="error-text">{{ repositoriesError }}</p>
 
       <div v-if="repositoriesLoading" class="muted">
-        Cargando repositorios...
+        Cargando entregas...
       </div>
 
       <div v-else-if="repositories.length" class="repositories-list">
+        <p class="entregas-count">Entregas recibidas: {{ repositories.length }}</p>
         <article
           v-for="repo in repositories"
           :key="repo.id"
@@ -269,7 +212,7 @@ function formatDate(value: string | null): string {
       </div>
 
       <p v-else-if="!repositoriesError" class="muted">
-        Este proyecto aun no tiene repositorios vinculados.
+        Este proyecto aun no tiene entregas de alumnos.
       </p>
 
       <div v-if="analysisResult || analysisError" class="analysis-result-section">
@@ -357,6 +300,14 @@ h1 {
   font-weight: 700;
 }
 
+.join-code-hint {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #5d6962;
+  margin-top: 2px;
+}
+
 .back-link {
   color: #2f8f5b;
   text-decoration: none;
@@ -390,6 +341,12 @@ h1 {
   font-size: 1.05rem;
 }
 
+.entregas-count {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  color: #5d6962;
+}
+
 .settings-link {
   color: #2f8f5b;
   text-decoration: none;
@@ -399,31 +356,6 @@ h1 {
 
 .settings-link:hover {
   text-decoration: underline;
-}
-
-.repo-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-  padding: 16px;
-  background: #fbfcfb;
-  border: 1px solid #dfe6e1;
-  border-radius: 8px;
-  margin-bottom: 18px;
-}
-
-.repo-form .field {
-  flex: 1;
-  min-width: 200px;
-}
-
-.field-small {
-  flex: 0 0 120px !important;
-}
-
-.repo-form .button {
-  flex-shrink: 0;
 }
 
 .field {
@@ -668,23 +600,6 @@ h1 {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
-  }
-
-  .repo-form {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .repo-form .field {
-    min-width: unset;
-  }
-
-  .field-small {
-    flex: unset !important;
-  }
-
-  .repo-form .button {
-    width: 100%;
   }
 
   .repo-card {
