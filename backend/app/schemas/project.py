@@ -27,5 +27,6 @@ class ProjectResponse(BaseModel):
     description: str | None
     requirements: list | dict | None
     due_date: datetime | None
+    join_code: str
     created_at: datetime
     updated_at: datetime

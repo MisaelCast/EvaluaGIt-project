@@ -8,6 +8,7 @@ from app.models.repository import Repository
 from app.models.user import User, UserRole
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 from app.schemas.repository import RepositoryResponse
+from app.services.join_code import generate_join_code
 
 router = APIRouter()
 
@@ -16,6 +17,16 @@ def _require_professor(user: User) -> None:
     """Helper que rechaza la petición si el usuario no es PROFESSOR ni ADMIN."""
     if user.role not in (UserRole.PROFESSOR, UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Solo profesores pueden gestionar proyectos")
+
+
+def _create_unique_join_code(db: Session) -> str:
+    """Genera un join_code único, reintentando si hay colisión."""
+    for _ in range(5):
+        code = generate_join_code()
+        existing = db.query(Project).filter(Project.join_code == code).first()
+        if not existing:
+            return code
+    raise RuntimeError("No se pudo generar código de unión")
 
 
 @router.get("", response_model=list[ProjectResponse])
@@ -35,9 +46,11 @@ def create_project(
 ):
     _require_professor(current_user)
 
-    # current_user.id se usa como professor_id para asociar el proyecto al creador
+    join_code = _create_unique_join_code(db)
+
     project = Project(
         professor_id=current_user.id,
+        join_code=join_code,
         **body.model_dump(),
     )
     db.add(project)

@@ -14,6 +14,7 @@ export type ProjectResponse = {
   description: string | null
   requirements: ProjectRequirements
   due_date: string | null
+  join_code: string
   created_at: string
   updated_at: string
 }

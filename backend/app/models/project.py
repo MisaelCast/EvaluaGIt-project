@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, JSON, String, func
+from sqlalchemy import Column, DateTime, ForeignKey, Index, JSON, String, func
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.db.base import Base
@@ -25,6 +25,7 @@ class Project(Base):
     description = Column(String, nullable=True)
     requirements = Column(JSON, nullable=True)
     due_date = Column(DateTime(timezone=True), nullable=True)
+    join_code = Column(String, unique=True, nullable=False, index=True)
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

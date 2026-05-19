@@ -117,6 +117,7 @@ function formatDate(value: string | null): string {
             <p class="muted">{{ project.description || 'Sin descripcion' }}</p>
             <div class="project-meta">
               <span>Creado: {{ formatDate(project.created_at) }}</span>
+              <span v-if="project.join_code" class="join-code">Codigo: {{ project.join_code }}</span>
             </div>
           </div>
           <div class="project-actions">
@@ -247,6 +248,15 @@ h1 {
   margin-top: 14px;
   color: #6c7770;
   font-size: 0.86rem;
+}
+
+.join-code {
+  background: #e3f5eb;
+  color: #17633d;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
 }
 
 .project-actions {

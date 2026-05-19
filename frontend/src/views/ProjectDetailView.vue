@@ -151,6 +151,9 @@ function formatDate(value: string | null): string {
       <div>
         <h1>Detalle del proyecto</h1>
         <p v-if="project" class="project-name">{{ project.name }}</p>
+        <p v-if="project?.join_code" class="join-code-display">
+          Codigo para alumnos: <code>{{ project.join_code }}</code>
+        </p>
       </div>
       <RouterLink to="/projects" class="back-link">Volver a proyectos</RouterLink>
     </header>
@@ -313,6 +316,20 @@ h1 {
   margin: 0;
   color: #5d6962;
   font-size: 1rem;
+}
+
+.join-code-display {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #17633d;
+}
+
+.join-code-display code {
+  background: #e3f5eb;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
 }
 
 .back-link {
