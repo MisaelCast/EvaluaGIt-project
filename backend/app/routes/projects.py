@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 from app.db.auth import get_current_user
 from app.db.deps import get_db
 from app.models.project import Project
+from app.models.project_member import ProjectMember
 from app.models.repository import Repository
 from app.models.user import User, UserRole
-from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from app.schemas.project import JoinProjectRequest, ProjectCreate, ProjectResponse, ProjectUpdate
 from app.schemas.repository import RepositoryResponse
 from app.services.join_code import generate_join_code
 
@@ -38,6 +39,58 @@ def list_projects(
     return db.query(Project).filter(Project.professor_id == current_user.id).all()
 
 
+@router.post("/join", response_model=ProjectResponse)
+def join_project(
+    body: JoinProjectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Solo alumnos pueden unirse a proyectos")
+
+    code = body.join_code.strip().upper()
+    project = db.query(Project).filter(Project.join_code == code).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Codigo de proyecto invalido")
+
+    existing = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project.id,
+        ProjectMember.user_id == current_user.id,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Ya estas unido a este proyecto")
+
+    member = ProjectMember(
+        project_id=project.id,
+        user_id=current_user.id,
+        role="STUDENT",
+    )
+    db.add(member)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.get("/joined", response_model=list[ProjectResponse])
+def list_joined_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Solo alumnos pueden consultar proyectos unidos")
+
+    members = db.query(ProjectMember).filter(
+        ProjectMember.user_id == current_user.id,
+        ProjectMember.role == "STUDENT",
+    ).all()
+
+    project_ids = [m.project_id for m in members]
+    if not project_ids:
+        return []
+
+    return db.query(Project).filter(Project.id.in_(project_ids)).all()
+
+
 @router.post("", response_model=ProjectResponse)
 def create_project(
     body: ProjectCreate,
@@ -54,6 +107,14 @@ def create_project(
         **body.model_dump(),
     )
     db.add(project)
+    db.flush()
+
+    member = ProjectMember(
+        project_id=project.id,
+        user_id=current_user.id,
+        role="PROFESSOR",
+    )
+    db.add(member)
     db.commit()
     db.refresh(project)
     return project

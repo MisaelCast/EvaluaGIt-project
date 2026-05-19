@@ -18,6 +18,10 @@ class ProjectUpdate(BaseModel):
     due_date: datetime | None = None
 
 
+class JoinProjectRequest(BaseModel):
+    join_code: str
+
+
 class ProjectResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -106,13 +106,51 @@ export async function updateProject(projectId: string, data: ProjectUpdate): Pro
   const headers = await getAuthHeaders()
 
   if (!headers.Authorization) {
-    throw new Error('Inicia sesión para editar proyectos')
+    throw new Error('Inicia sesion para editar proyectos')
   }
 
   const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
+export async function joinProject(joinCode: string): Promise<ProjectResponse> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesion para unirte a un proyecto')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/join`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ join_code: joinCode }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
+export async function getJoinedProjects(): Promise<ProjectResponse[]> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesion para ver tus proyectos')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/joined`, {
+    headers,
   })
 
   if (!response.ok) {

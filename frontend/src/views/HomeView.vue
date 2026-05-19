@@ -14,6 +14,7 @@ const healthError = ref('')
 const health = ref<HealthResponse | null>(null)
 const user = ref<User | null>(null)
 const authError = ref('')
+const userRole = ref<string | null>(null)
 
 const backendStatus = computed(() => {
   if (loading.value) return 'Cargando'
@@ -61,12 +62,9 @@ try {
           if (token) {
             await syncUser(user.value, token)
             const me = await getMe()
+            userRole.value = me.role
             if (me.role === 'UNASSIGNED') {
               router.push('/onboarding')
-              return
-            }
-            if (me.role === 'STUDENT') {
-              router.push('/student/dashboard')
               return
             }
           }
@@ -134,8 +132,26 @@ async function handleSignOut() {
           <p class="user-name">{{ displayName }}</p>
         </div>
         <nav class="user-nav">
-          <RouterLink to="/dashboard" class="button primary">
+          <RouterLink
+            v-if="userRole === 'PROFESSOR'"
+            to="/dashboard"
+            class="button primary"
+          >
             Ir al dashboard
+          </RouterLink>
+          <RouterLink
+            v-else-if="userRole === 'STUDENT'"
+            to="/student/dashboard"
+            class="button primary"
+          >
+            Ir al panel de alumno
+          </RouterLink>
+          <RouterLink
+            v-else-if="userRole === 'UNASSIGNED'"
+            to="/onboarding"
+            class="button primary"
+          >
+            Completar seleccion de rol
           </RouterLink>
           <button class="button secondary" type="button" @click="handleSignOut">
             Cerrar sesion
