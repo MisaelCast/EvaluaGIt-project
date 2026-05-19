@@ -9,7 +9,7 @@ import {
   createRepository,
   deleteRepository,
   getProjectRepositories,
-  type RepositoryResponse,
+  type RepositoryWithStudent,
 } from '@/services/repositories'
 import { getProject, type ProjectResponse } from '@/services/projects'
 
@@ -17,7 +17,7 @@ const route = useRoute()
 const projectId = route.params.projectId as string
 
 const project = ref<ProjectResponse | null>(null)
-const repositories = ref<RepositoryResponse[]>([])
+const repositories = ref<RepositoryWithStudent[]>([])
 const repositoriesLoading = ref(false)
 const repositoriesError = ref('')
 const creatingRepo = ref(false)
@@ -27,6 +27,15 @@ const newRepoBranch = ref('main')
 const analyzingRepositoryId = ref<string | null>(null)
 const analysisResult = ref<AnalysisRunResponse | null>(null)
 const analysisError = ref('')
+const failedAvatars = ref<Set<string>>(new Set())
+
+function handleAvatarError(studentId: string) {
+  failedAvatars.value.add(studentId)
+}
+
+function avatarHasFailed(studentId: string): boolean {
+  return failedAvatars.value.has(studentId)
+}
 
 onMounted(() => {
   void loadProject()
@@ -85,7 +94,7 @@ async function handleCreateRepository() {
   }
 }
 
-async function handleDeleteRepository(repo: RepositoryResponse) {
+async function handleDeleteRepository(repo: RepositoryWithStudent) {
   const confirmed = window.confirm(
     `¿Eliminar el repositorio ${repo.repo_url}?`,
   )
@@ -104,7 +113,7 @@ async function handleDeleteRepository(repo: RepositoryResponse) {
   }
 }
 
-async function handleAnalyze(repo: RepositoryResponse) {
+async function handleAnalyze(repo: RepositoryWithStudent) {
   analyzingRepositoryId.value = repo.id
   analysisError.value = ''
   analysisResult.value = null
@@ -208,6 +217,22 @@ function formatDate(value: string | null): string {
           class="repo-card"
         >
           <div class="repo-info">
+            <div class="student-info">
+              <img
+                v-if="repo.student.avatar_url && !avatarHasFailed(repo.student.id)"
+                :src="repo.student.avatar_url"
+                :alt="repo.student.full_name"
+                class="student-avatar"
+                @error="handleAvatarError(repo.student.id)"
+              />
+              <div v-else class="student-avatar-placeholder">
+                {{ repo.student.full_name.charAt(0).toUpperCase() }}
+              </div>
+              <div>
+                <p class="student-name">{{ repo.student.full_name }}</p>
+                <p class="student-email">{{ repo.student.email }}</p>
+              </div>
+            </div>
             <p class="repo-url">{{ repo.repo_url }}</p>
             <div class="repo-meta">
               <span
@@ -443,6 +468,45 @@ h1 {
 .repo-info {
   flex: 1;
   min-width: 0;
+}
+
+.student-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.student-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.student-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e3f5eb;
+  color: #17633d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.student-name {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.student-email {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6c7770;
 }
 
 .repo-url {

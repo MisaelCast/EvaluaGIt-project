@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { createRepository, deleteRepository, getMyRepositories, type RepositoryResponse } from '@/services/repositories'
 import { getJoinedProjects, joinProject, type ProjectResponse } from '@/services/projects'
 
 const joinedProjects = ref<ProjectResponse[]>([])
 const loadingProjects = ref(false)
 const projectsError = ref('')
 
+const myRepositories = ref<RepositoryResponse[]>([])
+const loadingRepos = ref(false)
+
 const joinCodeInput = ref('')
 const joining = ref(false)
 const joinError = ref('')
 const joinSuccess = ref('')
 
+const repositoryForms = reactive<Record<string, { repo_url: string; branch: string }>>({})
+const repositoryErrors = reactive<Record<string, string>>({})
+const repositorySuccess = reactive<Record<string, string>>({})
+const creatingRepoId = ref<string | null>(null)
+
 onMounted(() => {
   void loadJoinedProjects()
+  void loadMyRepositories()
 })
 
 async function loadJoinedProjects() {
@@ -22,11 +32,25 @@ async function loadJoinedProjects() {
 
   try {
     joinedProjects.value = await getJoinedProjects()
+    for (const p of joinedProjects.value) {
+      repositoryForms[p.id] = { repo_url: '', branch: 'main' }
+    }
   } catch (err) {
     joinedProjects.value = []
     projectsError.value = err instanceof Error ? err.message : 'No se pudieron cargar los proyectos'
   } finally {
     loadingProjects.value = false
+  }
+}
+
+async function loadMyRepositories() {
+  loadingRepos.value = true
+  try {
+    myRepositories.value = await getMyRepositories()
+  } catch {
+    myRepositories.value = []
+  } finally {
+    loadingRepos.value = false
   }
 }
 
@@ -50,6 +74,46 @@ async function handleJoinProject() {
     joinError.value = err instanceof Error ? err.message : 'No se pudo unir al proyecto'
   } finally {
     joining.value = false
+  }
+}
+
+async function handleLinkRepo(projectId: string) {
+  const form = repositoryForms[projectId]
+  if (!form || !form.repo_url.trim()) {
+    repositoryErrors[projectId] = 'La URL del repositorio es obligatoria'
+    return
+  }
+
+  creatingRepoId.value = projectId
+  repositoryErrors[projectId] = ''
+  repositorySuccess[projectId] = ''
+
+  try {
+    await createRepository({
+      project_id: projectId,
+      repo_url: form.repo_url.trim(),
+      branch: form.branch.trim() || 'main',
+    })
+    form.repo_url = ''
+    form.branch = 'main'
+    repositorySuccess[projectId] = 'Repositorio vinculado correctamente'
+    await loadMyRepositories()
+  } catch (err) {
+    repositoryErrors[projectId] = err instanceof Error ? err.message : 'Error al vincular'
+  } finally {
+    creatingRepoId.value = null
+  }
+}
+
+async function handleDeleteRepo(repoId: string) {
+  const confirmed = window.confirm('¿Eliminar este repositorio?')
+  if (!confirmed) return
+
+  try {
+    await deleteRepository(repoId)
+    await loadMyRepositories()
+  } catch {
+    // silently fail for now
   }
 }
 
@@ -98,31 +162,106 @@ function formatDate(value: string | null): string {
         <p v-if="joinSuccess" class="mt-3 text-emerald-700 text-sm font-medium">{{ joinSuccess }}</p>
       </section>
 
-      <section class="bg-white border border-slate-200 rounded-xl p-6">
+      <section class="bg-white border border-slate-200 rounded-xl p-6 mb-6">
         <h2 class="text-lg font-semibold text-slate-900 mb-4">Proyectos unidos</h2>
 
         <p v-if="loadingProjects" class="text-slate-500">Cargando proyectos...</p>
         <p v-else-if="projectsError" class="text-red-600">{{ projectsError }}</p>
 
-        <div v-else-if="joinedProjects.length" class="space-y-4">
+        <div v-else-if="joinedProjects.length" class="space-y-6">
           <div
             v-for="project in joinedProjects"
             :key="project.id"
             class="border border-slate-200 rounded-lg p-4"
           >
-            <h3 class="font-semibold text-slate-900">{{ project.name }}</h3>
-            <p class="text-sm text-slate-500 mt-1">
-              {{ project.description || 'Sin descripcion' }}
-            </p>
-            <div class="mt-2 flex items-center gap-4 text-xs text-slate-400">
-              <span>Creado: {{ formatDate(project.created_at) }}</span>
-              <span class="font-mono bg-slate-100 px-2 py-0.5 rounded">Codigo: {{ project.join_code }}</span>
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-semibold text-slate-900">{{ project.name }}</h3>
+                <p class="text-sm text-slate-500 mt-1">
+                  {{ project.description || 'Sin descripcion' }}
+                </p>
+                <div class="mt-2 flex items-center gap-4 text-xs text-slate-400">
+                  <span>Creado: {{ formatDate(project.created_at) }}</span>
+                  <span class="font-mono bg-slate-100 px-2 py-0.5 rounded">Codigo: {{ project.join_code }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-100">
+              <h4 class="text-sm font-medium text-slate-700 mb-2">Vincular mi repositorio</h4>
+              <div class="flex gap-2">
+                <input
+                  v-model="(repositoryForms[project.id] || { repo_url: '', branch: 'main' }).repo_url"
+                  type="text"
+                  placeholder="https://github.com/usuario/repositorio"
+                  class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                  :disabled="creatingRepoId === project.id"
+                />
+                <input
+                  v-model="(repositoryForms[project.id] || { repo_url: '', branch: 'main' }).branch"
+                  type="text"
+                  placeholder="main"
+                  class="w-24 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                  :disabled="creatingRepoId === project.id"
+                />
+                <button
+                  type="button"
+                  :disabled="creatingRepoId === project.id"
+                  class="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                  @click="handleLinkRepo(project.id)"
+                >
+                  {{ creatingRepoId === project.id ? 'Vinculando...' : 'Vincular' }}
+                </button>
+              </div>
+              <p v-if="repositoryErrors[project.id]" class="mt-2 text-red-600 text-sm">{{ repositoryErrors[project.id] }}</p>
+              <p v-if="repositorySuccess[project.id]" class="mt-2 text-emerald-700 text-sm font-medium">{{ repositorySuccess[project.id] }}</p>
             </div>
           </div>
         </div>
 
         <p v-else class="text-slate-500 text-sm">
           Aun no te has unido a ningun proyecto.
+        </p>
+      </section>
+
+      <section class="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+        <h2 class="text-lg font-semibold text-slate-900 mb-4">Mis repositorios vinculados</h2>
+
+        <p v-if="loadingRepos" class="text-slate-500">Cargando...</p>
+
+        <div v-else-if="myRepositories.length" class="space-y-3">
+          <div
+            v-for="repo in myRepositories"
+            :key="repo.id"
+            class="border border-slate-200 rounded-lg p-4"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="font-medium text-slate-900 break-all">{{ repo.repo_url }}</p>
+                <p class="text-sm text-slate-500 mt-1">Rama: {{ repo.branch }}</p>
+                <p class="text-sm text-slate-400 mt-1">
+                  Estado: <span class="font-medium">{{ repo.status }}</span>
+                </p>
+                <p v-if="repo.last_commit_hash" class="text-xs text-slate-400 mt-1">
+                  Commit: {{ repo.last_commit_hash.substring(0, 7) }}
+                </p>
+                <p v-if="repo.last_analyzed_at" class="text-xs text-slate-400 mt-1">
+                  Analizado: {{ formatDate(repo.last_analyzed_at) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="px-3 py-1 bg-red-50 text-red-600 text-sm font-medium rounded hover:bg-red-100"
+                @click="handleDeleteRepo(repo.id)"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p v-else class="text-slate-500 text-sm">
+          Aun no has vinculado ningun repositorio.
         </p>
       </section>
 

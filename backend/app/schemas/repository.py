@@ -10,6 +10,31 @@ class RepositoryCreate(BaseModel):
     branch: str = "main"
 
 
+class RepositoryStudentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    full_name: str
+    email: str
+    avatar_url: str | None
+
+
+class RepositoryWithStudentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    project_id: UUID
+    student_id: UUID
+    repo_url: str
+    branch: str
+    status: str
+    last_commit_hash: str | None
+    last_analyzed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    student: RepositoryStudentResponse
+
+
 class RepositoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
