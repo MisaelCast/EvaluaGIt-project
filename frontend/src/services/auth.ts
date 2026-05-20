@@ -2,9 +2,9 @@ import { supabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
 /**
- * Inicia el flujo de autenticación OAuth con Google.
- * El redirectTo asegura que Supabase redirija de vuelta al frontend
- * después de que el usuario complete el login en el proveedor.
+ * Inicia el flujo de autenticacion OAuth con Google
+ * redirectTo hace que Supabase redirija al usuario de vuelta a esta
+ * aplicacion al completar el login en Google
  */
 export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
@@ -19,6 +19,10 @@ export async function signInWithGoogle(): Promise<void> {
   }
 }
 
+/**
+ * Cierra la sesion en Supabase
+ * No afecta la sesion del backend
+ */
 export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut()
 
@@ -28,8 +32,8 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Consulta si existe un usuario autenticado en la sesión actual.
- * Útil para restaurar el estado de auth al cargar la página.
+ * Obtiene el usuario actual desde Supabase
+ * Sirve para restaurar auth al recargar la pagina
  */
 export async function getCurrentUser(): Promise<User | null> {
   const { data, error } = await supabase.auth.getSession()

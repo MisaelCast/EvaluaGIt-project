@@ -20,7 +20,7 @@ async function parseApiError(response: Response): Promise<string> {
       return body.detail
     }
   } catch {
-    // Si el backend no devuelve JSON, usamos un mensaje genérico.
+    // Si el backend no devuelve JSON usamos un mensaje generico
   }
 
   return 'No se pudo completar la solicitud'
@@ -28,6 +28,11 @@ async function parseApiError(response: Response): Promise<string> {
 
 const ANALYZE_TIMEOUT_MS = 60000
 
+/**
+ * Envia una solicitud para analizar un repositorio
+ * El analisis puede tardar varios segundos
+ * por eso usa un timeout mayor que el default
+ */
 export async function analyzeRepository(repositoryId: string): Promise<AnalysisRunResponse> {
   const headers = await getAuthHeaders()
 
@@ -52,6 +57,10 @@ export async function analyzeRepository(repositoryId: string): Promise<AnalysisR
   return response.json()
 }
 
+/**
+ * Consulta un analisis por su id
+ * Sirve para ver estado resultado y errores
+ */
 export async function getAnalysisRun(analysisRunId: string): Promise<AnalysisRunResponse> {
   const headers = await getAuthHeaders()
 

@@ -3,9 +3,9 @@ import type { User } from '@supabase/supabase-js'
 import { API_URL, fetchWithTimeout, getAuthHeaders } from './api'
 
 /**
- * Sincroniza el usuario autenticado en Supabase con la base de datos
- * local del backend. Se llama típicamente después del login exitoso.
- * Requiere token JWT válido; el backend extrae la identidad del token.
+ * Sincroniza el usuario de Supabase con el backend
+ * Envia el token JWT en Authorization
+ * El backend lo usa para verificar la identidad
  */
 export async function syncUser(user: User, accessToken: string): Promise<void> {
   const response = await fetchWithTimeout(`${API_URL}/auth/sync-user`, {
@@ -27,6 +27,10 @@ export async function syncUser(user: User, accessToken: string): Promise<void> {
   }
 }
 
+/**
+ * Actualiza el rol del usuario autenticado
+ * Solo requiere sesion activa
+ */
 export async function updateMyRole(role: 'PROFESSOR' | 'STUDENT'): Promise<void> {
   const headers = await getAuthHeaders()
   const response = await fetchWithTimeout(`${API_URL}/auth/me/role`, {

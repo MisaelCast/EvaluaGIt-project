@@ -40,12 +40,16 @@ async function parseApiError(response: Response): Promise<string> {
       return body.detail
     }
   } catch {
-    // Si el backend no devuelve JSON, usamos un mensaje genérico.
+    // Si el backend no devuelve JSON usamos un mensaje generico
   }
 
   return 'No se pudo completar la solicitud'
 }
 
+/**
+ * Obtiene los proyectos del profesor
+ * Requiere sesion activa
+ */
 export async function getProjects(): Promise<ProjectResponse[]> {
   const headers = await getAuthHeaders()
 
@@ -64,6 +68,10 @@ export async function getProjects(): Promise<ProjectResponse[]> {
   return response.json()
 }
 
+/**
+ * Obtiene los detalles de un proyecto
+ * Solo el profesor propietario puede verlos
+ */
 export async function getProject(projectId: string): Promise<ProjectResponse> {
   const headers = await getAuthHeaders()
 
@@ -82,6 +90,10 @@ export async function getProject(projectId: string): Promise<ProjectResponse> {
   return response.json()
 }
 
+/**
+ * Crea un proyecto para el profesor autenticado
+ * El profesor queda como propietario
+ */
 export async function createProject(data: ProjectCreate): Promise<ProjectResponse> {
   const headers = await getAuthHeaders()
 
@@ -102,6 +114,10 @@ export async function createProject(data: ProjectCreate): Promise<ProjectRespons
   return response.json()
 }
 
+/**
+ * Actualiza un proyecto existente
+ * Solo el profesor propietario puede modificarlo
+ */
 export async function updateProject(projectId: string, data: ProjectUpdate): Promise<ProjectResponse> {
   const headers = await getAuthHeaders()
 
@@ -122,6 +138,10 @@ export async function updateProject(projectId: string, data: ProjectUpdate): Pro
   return response.json()
 }
 
+/**
+ * Permite unirse a un proyecto con codigo de acceso
+ * El profesor comparte el codigo con sus alumnos
+ */
 export async function joinProject(joinCode: string): Promise<ProjectResponse> {
   const headers = await getAuthHeaders()
 
@@ -142,6 +162,10 @@ export async function joinProject(joinCode: string): Promise<ProjectResponse> {
   return response.json()
 }
 
+/**
+ * Obtiene los proyectos unidos del estudiante
+ * Incluye proyectos con repositorios vinculados
+ */
 export async function getJoinedProjects(): Promise<ProjectResponse[]> {
   const headers = await getAuthHeaders()
 
@@ -180,7 +204,7 @@ export async function deleteProject(projectId: string): Promise<void> {
         message = body.detail
       }
     } catch {
-      // Si el backend no devuelve JSON, usamos el mensaje genérico.
+      // Si el backend no devuelve JSON usamos el mensaje generico
     }
     throw new Error(message)
   }

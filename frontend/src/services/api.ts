@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase'
 
 /**
- * URL base del backend. Se lee desde variables de entorno de Vite.
- * Lanza error en tiempo de importación si no está configurada.
+ * URL base del backend
+ * Se lee desde variables de entorno de Vite
  */
 export const API_URL = import.meta.env.VITE_API_URL
 
@@ -16,6 +16,11 @@ export type HealthResponse = {
 
 const API_TIMEOUT_MS = 8000
 
+/**
+ * Wrapper sobre fetch con timeout
+ * Aborta la peticion si tarda demasiado
+ * Limpia el timeout al terminar
+ */
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},
@@ -41,9 +46,9 @@ export async function fetchWithTimeout(
 }
 
 /**
- * Obtiene los headers de autenticación incluyendo el Bearer token
- * desde la sesión activa de Supabase. Si no hay sesión, solo envía
- * Content-Type sin Authorization.
+ * Obtiene headers para requests autenticadas
+ * Agrega el token de Supabase si hay sesion
+ * Siempre incluye Content-Type
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession()
@@ -60,6 +65,9 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers
 }
 
+/**
+ * Verifica que el backend este disponible
+ */
 export async function getHealth(): Promise<HealthResponse> {
   const response = await fetchWithTimeout(`${API_URL}/health`)
 
@@ -79,6 +87,10 @@ export type MeResponse = {
   role: string
 }
 
+/**
+ * Obtiene los datos del usuario actual desde el backend
+ * Usa el token de Supabase para validar la sesion
+ */
 export async function getMe(): Promise<MeResponse> {
   const headers = await getAuthHeaders()
   const response = await fetchWithTimeout(`${API_URL}/auth/me`, {
