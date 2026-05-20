@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.ai_analysis import router as ai_analysis_router
 from app.routes.analysis import router as analysis_router
 from app.routes.analysis_runs import router as analysis_runs_router
 from app.routes.auth import router as auth_router
@@ -21,6 +22,7 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(projects_router, prefix="/projects", tags=["projects"])
 app.include_router(repositories_router, prefix="/repositories", tags=["repositories"])
 app.include_router(analysis_router, prefix="/repositories", tags=["analysis"])
+app.include_router(ai_analysis_router, prefix="/repositories", tags=["ai-analysis"])
 app.include_router(analysis_runs_router, prefix="/analysis-runs", tags=["analysis-runs"])
 
 
