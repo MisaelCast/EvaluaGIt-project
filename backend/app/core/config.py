@@ -19,3 +19,5 @@ if SUPABASE_ANON_KEY is None:
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 if SUPABASE_SERVICE_ROLE_KEY is None:
     raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY no está configurada")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or None
