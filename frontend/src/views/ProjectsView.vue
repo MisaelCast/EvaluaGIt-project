@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { createProject, getProjects, type ProjectResponse } from '@/services/projects'
+import { createProject, deleteProject, getProjects, type ProjectResponse } from '@/services/projects'
 
 const projects = ref<ProjectResponse[]>([])
 const projectsLoading = ref(false)
@@ -9,6 +9,7 @@ const projectsError = ref('')
 const creatingProject = ref(false)
 const newProjectName = ref('')
 const newProjectDescription = ref('')
+const deletingProjectId = ref<string | null>(null)
 
 onMounted(() => {
   void loadProjects()
@@ -61,6 +62,26 @@ async function handleCreateProject() {
       err instanceof Error ? err.message : 'No se pudo crear el proyecto'
   } finally {
     creatingProject.value = false
+  }
+}
+
+async function handleDeleteProject(project: ProjectResponse) {
+  const confirmed = window.confirm(
+    `¿Eliminar el proyecto "${project.name}"? Esta acción no se puede deshacer.`
+  )
+  if (!confirmed) return
+
+  deletingProjectId.value = project.id
+  projectsError.value = ''
+
+  try {
+    await deleteProject(project.id)
+    await loadProjects()
+  } catch (err) {
+    projectsError.value =
+      err instanceof Error ? err.message : 'No se pudo eliminar el proyecto'
+  } finally {
+    deletingProjectId.value = null
   }
 }
 
@@ -133,6 +154,13 @@ function formatDate(value: string | null): string {
             >
               Configuracion
             </RouterLink>
+            <button
+              class="button danger"
+              :disabled="deletingProjectId === project.id"
+              @click="handleDeleteProject(project)"
+            >
+              {{ deletingProjectId === project.id ? 'Eliminando...' : 'Eliminar' }}
+            </button>
           </div>
         </article>
       </div>
@@ -283,6 +311,20 @@ h1 {
 .button.secondary {
   background: #eef1ef;
   color: #17201b;
+}
+
+.button.danger {
+  background: #fce8e8;
+  color: #9b2525;
+}
+
+.button.danger:hover {
+  background: #f5d5d5;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .button:hover {

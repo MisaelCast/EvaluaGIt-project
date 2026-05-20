@@ -159,3 +159,29 @@ export async function getJoinedProjects(): Promise<ProjectResponse[]> {
 
   return response.json()
 }
+
+export async function deleteProject(projectId: string): Promise<void> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesión para eliminar proyectos')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}`, {
+    method: 'DELETE',
+    headers,
+  })
+
+  if (!response.ok) {
+    let message = 'No se pudo eliminar el proyecto'
+    try {
+      const body = await response.json()
+      if (typeof body.detail === 'string') {
+        message = body.detail
+      }
+    } catch {
+      // Si el backend no devuelve JSON, usamos el mensaje genérico.
+    }
+    throw new Error(message)
+  }
+}

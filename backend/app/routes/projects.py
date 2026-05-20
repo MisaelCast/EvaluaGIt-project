@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.auth import get_current_user
 from app.db.deps import get_db
+from app.models.analysis_run import AnalysisRun
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.repository import Repository
@@ -180,6 +181,12 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
+    repos = db.query(Repository).filter(Repository.project_id == project_id).all()
+    for repo in repos:
+        db.query(AnalysisRun).filter(AnalysisRun.repository_id == repo.id).delete()
+
+    db.query(Repository).filter(Repository.project_id == project_id).delete()
+    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete()
     db.delete(project)
     db.commit()
 
