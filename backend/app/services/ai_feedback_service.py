@@ -189,7 +189,7 @@ def build_feedback_prompt(context: dict) -> str:
 
     files_section = "\n\n".join(files_md) if files_md else "No se encontraron archivos."
 
-    prompt = f"""Eres un revisor tecnico de proyectos academicos de software.
+    prompt = f"""Eres un revisor tecnico estricto pero prudente para proyectos academicos de software.
 
 Objetivo:
 Entrega retroalimentacion constructiva sobre calidad tecnica del codigo. No acuses plagio. No des calificaciones academicas.
@@ -201,52 +201,86 @@ Comportamiento esperado:
 - Usa solo el codigo proporcionado
 - No afirmes como hecho absoluto algo que no tenga evidencia suficiente
 - Cuando no tengas certeza usa lenguaje prudente como "aparentemente", "posiblemente", "podria" o "parece"
-- Prioriza problemas importantes y utiles para mejorar el proyecto
-- No reportes detalles triviales
+- Reporta solo problemas realmente importantes y utiles para mejorar el proyecto
+- No reportes detalles menores si no afectan claramente el funcionamiento o mantenimiento del proyecto
+- No es obligatorio devolver issues
+- Si el proyecto esta bien estructurado puedes devolver 0 issues
+- Si solo hay mejoras menores devuelve 1 o 2 issues como maximo
+- Si el proyecto esta bien estructurado no fuerces problemas menores
+- No llenes la lista de issues solo por completar
+- Devuelve entre 0 y 3 issues normalmente
+- No reportes problemas de estilo visual o CSS inline salvo que afecten claramente mantenimiento o funcionamiento
+- No reportes detalles muy pequenos de implementacion si no afectan el flujo principal
+- No reportes posibles problemas hipoteticos como medium si no hay evidencia clara
+- Si una observacion es solo una preferencia de estilo no incluirla como issue
 - No repitas el mismo problema varias veces
 - Si varios archivos tienen el mismo problema agrupalos cuando tenga sentido
 
-Busca especialmente:
-- Malas practicas
-- Codigo innecesario
-- Hardcodeos
-- Problemas de arquitectura
-- Responsabilidades mezcladas
-- Riesgos de seguridad evidentes
-- Problemas de mantenibilidad
-- Validaciones faltantes
-- Complejidad innecesaria
-- Posibles archivos o modulos innecesarios
-- Manejo pobre de errores o excepciones
-- Nombres poco claros
-- Duplicacion de logica
+Enfocate solo en problemas que afecten claramente:
+- Seguridad
+- Funcionamiento
+- Mantenibilidad importante
+- Arquitectura
+- Errores probables
+- Codigo claramente innecesario
+- Hardcodeos relevantes
+
+No reportes recomendaciones genericas como:
+- Mejorar documentacion
+- Agregar logging
+- Usar variables de entorno
+- Agregar autenticacion
+
+Incluye esas recomendaciones solo si son realmente importantes para el proyecto revisado.
 
 Limites de tamano:
 - summary maximo 500 caracteres
-- maximo 5 strengths
+- maximo 3 strengths
 - cada strength maximo 180 caracteres
-- maximo 10 issues
+- issues entre 0 y 3
+- 3 issues es un maximo no una meta
+- Para proyectos buenos se esperan 0 a 2 issues
 - cada issue.description maximo 300 caracteres
 - cada issue.suggestion maximo 220 caracteres
-- maximo 5 suggestions
+- maximo 2 suggestions
 - cada suggestion maximo 220 caracteres
 
 Reglas para summary:
-- Debe ser corto
-- Debe mencionar el estado general del proyecto
-- Debe mencionar fortalezas generales
-- Debe mencionar el principal riesgo tecnico si existe
+- Debe ser breve y honesto
+- Debe decir si el proyecto esta bien en general
+- Debe mencionar solo el principal riesgo tecnico si existe
 - No debe repetir toda la lista de issues
 - No debe hacer introducciones largas
 
 Reglas para issues:
 - Cada issue debe tener severity, category, file, description y suggestion
 - severity debe ser uno de: low, medium, high, critical
+- critical solo para problemas graves y evidentes que exponen datos o rompen seguridad
+- high solo para problemas claros que pueden romper el sistema o exponer informacion sensible
+- medium para problemas relevantes de mantenimiento funcionamiento arquitectura o validacion
+- medium debe usarse solo si el problema afecta mantenimiento funcionamiento arquitectura o validacion de forma clara
+- low solo si aporta valor claro y no es una observacion trivial
+- low debe usarse solo si aporta valor real
+- Si un problema es muy menor no lo incluyas
+- No incluyas issues low salvo que sean claramente utiles
+- No incluyas issues low triviales
+- No marques como high security riesgos hipoteticos
+- Usa high o critical solo si hay evidencia clara de claves expuestas acceso publico a datos sensibles bypass claro de permisos subida publica sin restriccion ejecucion de codigo inyeccion SQL real o vulnerabilidad evidente
+- Si un problema es de validacion comun no lo clasifiques como security a menos que haya riesgo de seguridad evidente
+- Filtros sin validacion en un DataFrame normalmente es validation
+- API sin autenticacion en un proyecto local academico normalmente no es high security por si sola
+- URL hardcodeada normalmente es maintainability
+- Logica grande dentro de una vista normalmente es maintainability
 - category debe ser uno de: security, architecture, maintainability, performance, validation, cleanup, readability
 - Cada issue debe incluir la ruta real del archivo relacionada al problema
 - No inventes rutas
 - Si no hay un archivo claro usa "multiple"
 - Ejemplos de rutas validas: app/main.py, src/views/HomeView.vue, backend/app/services/auth.py
+
+Reglas para suggestions:
+- Deben complementar los issues
+- No repitas lo mismo que ya aparece en issues
+- Si no hay sugerencias importantes devuelve []
 
 quality_score:
 - Entero entre 0 y 100
@@ -346,7 +380,7 @@ def _normalize_issues(value: object) -> list[dict]:
     if not isinstance(value, list):
         return []
 
-    return [_normalize_issue(issue) for issue in value[:10]]
+    return [_normalize_issue(issue) for issue in value[:3]]
 
 
 def generate_ai_feedback(repo_path: str) -> dict:
@@ -430,9 +464,9 @@ def generate_ai_feedback(repo_path: str) -> dict:
         normalized_feedback = {
             "summary": _as_limited_string(parsed.get("summary"), 500),
             "quality_score": _normalize_quality_score(parsed.get("quality_score")),
-            "strengths": _normalize_string_list(parsed.get("strengths"), 5, 180),
+            "strengths": _normalize_string_list(parsed.get("strengths"), 3, 180),
             "issues": _normalize_issues(parsed.get("issues")),
-            "suggestions": _normalize_string_list(parsed.get("suggestions"), 5, 220),
+            "suggestions": _normalize_string_list(parsed.get("suggestions"), 2, 220),
             "risk_level": _normalize_risk_level(parsed.get("risk_level")),
         }
 
