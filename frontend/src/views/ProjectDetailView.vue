@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import AiAnalysisResult from '@/components/AiAnalysisResult.vue'
 import {
   analyzeRepositoryWithAi,
   getLatestAiAnalysis,
@@ -291,7 +292,7 @@ function formatDate(value: string | null): string {
 
         <div v-if="analysisResult" class="analysis-data">
           <div class="analysis-info">
-            <span><strong>Status:</strong> {{ analysisResult.status }}</span>
+            <span><strong>Estado:</strong> {{ analysisResult.status }}</span>
             <span v-if="analysisResult.commit_hash">
               <strong>Commit:</strong> {{ analysisResult.commit_hash.substring(0, 7) }}
             </span>
@@ -319,90 +320,15 @@ function formatDate(value: string | null): string {
         </div>
       </div>
 
-      <div v-if="aiAnalysisResult || aiAnalysisError" class="ai-result-section">
-        <h3>Resultado del analisis IA</h3>
-
+      <div v-if="aiAnalysisRun || aiAnalysisResult || aiAnalysisError" class="mt-6">
         <p v-if="aiAnalysisError" class="error-text">{{ aiAnalysisError }}</p>
-
-        <div v-if="aiAnalysisRun" class="ai-meta">
-          <span><strong>Status:</strong> {{ aiAnalysisRun.status }}</span>
-          <span><strong>Creado:</strong> {{ formatDate(aiAnalysisRun.created_at) }}</span>
-          <span v-if="aiAnalysisRun.finished_at">
-            <strong>Finalizado:</strong> {{ formatDate(aiAnalysisRun.finished_at) }}
-          </span>
-          <span v-if="aiAnalysisRun.error_message" class="error-text">
-            <strong>Error:</strong> {{ aiAnalysisRun.error_message }}
-          </span>
-        </div>
-
-        <div v-if="aiAnalysisResult" class="ai-data">
-          <p v-if="aiAnalysisResult.enabled === false && aiAnalysisResult.message" class="muted">
-            {{ aiAnalysisResult.message }}
-          </p>
-
-          <p v-if="aiAnalysisResult.error" class="ai-error">
-            {{ aiAnalysisResult.error }}
-          </p>
-
-          <div class="ai-meta">
-            <span><strong>Provider:</strong> {{ aiAnalysisResult.provider }}</span>
-            <span v-if="aiAnalysisResult.files_count !== null">
-              <strong>Archivos:</strong> {{ aiAnalysisResult.files_count }}
-            </span>
-            <span v-if="aiAnalysisResult.quality_score !== null">
-              <strong>Quality score:</strong> {{ aiAnalysisResult.quality_score }}
-            </span>
-            <span v-if="aiAnalysisResult.risk_level">
-              <strong>Riesgo:</strong> {{ aiAnalysisResult.risk_level }}
-            </span>
-          </div>
-
-          <p v-if="aiAnalysisResult.summary" class="ai-summary">
-            {{ aiAnalysisResult.summary }}
-          </p>
-
-          <section v-if="aiAnalysisResult.strengths.length" class="ai-block">
-            <h4>Fortalezas</h4>
-            <ul>
-              <li v-for="strength in aiAnalysisResult.strengths" :key="strength">
-                {{ strength }}
-              </li>
-            </ul>
-          </section>
-
-          <section class="ai-block">
-            <h4>Problemas detectados</h4>
-            <p v-if="!aiAnalysisResult.issues.length" class="muted">
-              No se detectaron problemas importantes en el contexto revisado
-            </p>
-            <div v-else class="issues-list">
-              <article
-                v-for="(issue, index) in aiAnalysisResult.issues"
-                :key="`${issue.file}-${index}`"
-                class="issue-card"
-              >
-                <div class="issue-header">
-                  <span class="issue-badge">{{ issue.severity }}</span>
-                  <span class="issue-category">{{ issue.category }}</span>
-                </div>
-                <p class="issue-file">{{ issue.file }}</p>
-                <p class="issue-description">{{ issue.description }}</p>
-                <p class="issue-suggestion">
-                  <strong>Sugerencia:</strong> {{ issue.suggestion }}
-                </p>
-              </article>
-            </div>
-          </section>
-
-          <section v-if="aiAnalysisResult.suggestions.length" class="ai-block">
-            <h4>Sugerencias generales</h4>
-            <ul>
-              <li v-for="suggestion in aiAnalysisResult.suggestions" :key="suggestion">
-                {{ suggestion }}
-              </li>
-            </ul>
-          </section>
-        </div>
+        <AiAnalysisResult
+          v-if="aiAnalysisRun || aiAnalysisResult"
+          :result="aiAnalysisResult"
+          :status="aiAnalysisRun?.status"
+          :created-at="aiAnalysisRun?.created_at"
+          :finished-at="aiAnalysisRun?.finished_at"
+        />
       </div>
     </section>
   </main>
@@ -690,118 +616,6 @@ h1 {
 .analysis-result-section h3 {
   margin: 0 0 14px;
   font-size: 0.95rem;
-}
-
-.ai-result-section {
-  margin-top: 24px;
-  padding: 16px;
-  background: #fbfcfb;
-  border: 1px solid #dfe6e1;
-  border-radius: 8px;
-}
-
-.ai-result-section h3 {
-  margin: 0 0 14px;
-  font-size: 0.95rem;
-}
-
-.ai-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin-bottom: 14px;
-  font-size: 0.88rem;
-  color: #4b5650;
-}
-
-.ai-summary {
-  margin: 0 0 18px;
-  color: #17201b;
-  line-height: 1.6;
-}
-
-.ai-error {
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: #fde8e8;
-  color: #9b2525;
-  line-height: 1.5;
-}
-
-.ai-block {
-  margin-top: 18px;
-}
-
-.ai-block h4 {
-  margin: 0 0 10px;
-  font-size: 0.9rem;
-}
-
-.ai-block ul {
-  margin: 0;
-  padding-left: 20px;
-  color: #4b5650;
-  line-height: 1.6;
-}
-
-.issues-list {
-  display: grid;
-  gap: 12px;
-}
-
-.issue-card {
-  border: 1px solid #dfe6e1;
-  border-radius: 8px;
-  padding: 12px;
-  background: #ffffff;
-}
-
-.issue-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.issue-badge,
-.issue-category {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.issue-badge {
-  background: #fff3e0;
-  color: #8a4700;
-}
-
-.issue-category {
-  background: #eef1ef;
-  color: #4b5650;
-}
-
-.issue-file {
-  margin: 0 0 8px;
-  font-family: monospace;
-  font-size: 0.82rem;
-  color: #244579;
-  word-break: break-all;
-}
-
-.issue-description,
-.issue-suggestion {
-  margin: 0 0 8px;
-  color: #4b5650;
-  line-height: 1.5;
-}
-
-.issue-suggestion {
-  margin-bottom: 0;
 }
 
 .analysis-info {
