@@ -9,15 +9,32 @@ export type SimilarityRepositoryItem = {
   branch: string
 }
 
+export type SimilarityPair = {
+  left_repository_id: string
+  right_repository_id: string
+  left_student_name: string
+  right_student_name: string
+  left_file: string
+  right_file: string
+  similarity: number | null
+  similarity_percent: number | null
+  level: 'normal' | 'review' | 'relevant' | 'high'
+  label: string
+  extra: Record<string, unknown>
+}
+
 export type SimilarityAnalysisResponse = {
   project_id: string
   status: string
   message: string
   repositories_count: number
   repositories: SimilarityRepositoryItem[]
-  pairs: unknown[]
+  pairs: SimilarityPair[]
   provider: string
   executed: boolean
+  raw_output?: string | null
+  output_files?: string[]
+  summary?: Record<string, unknown> | null
 }
 
 async function parseApiError(response: Response): Promise<string> {
@@ -33,6 +50,8 @@ async function parseApiError(response: Response): Promise<string> {
   return 'No se pudo analizar la similitud'
 }
 
+const SIMILARITY_ANALYSIS_TIMEOUT_MS = 120000
+
 export async function analyzeProjectSimilarity(projectId: string): Promise<SimilarityAnalysisResponse> {
   const headers = await getAuthHeaders()
 
@@ -40,10 +59,14 @@ export async function analyzeProjectSimilarity(projectId: string): Promise<Simil
     throw new Error('Inicia sesion para analizar similitud')
   }
 
-  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/similarity/analyze`, {
-    method: 'POST',
-    headers,
-  })
+  const response = await fetchWithTimeout(
+    `${API_URL}/projects/${projectId}/similarity/analyze`,
+    {
+      method: 'POST',
+      headers,
+    },
+    SIMILARITY_ANALYSIS_TIMEOUT_MS,
+  )
 
   if (!response.ok) {
     throw new Error(await parseApiError(response))

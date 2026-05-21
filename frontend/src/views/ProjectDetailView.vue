@@ -199,6 +199,47 @@ function formatDate(value: string | null): string {
     dateStyle: 'medium',
   }).format(new Date(value))
 }
+
+function formatSimilarityStatus(value: string): string {
+  switch (value) {
+    case 'COMPLETED':
+      return 'Completado'
+    case 'READY':
+      return 'Listo'
+    case 'FAILED':
+      return 'Fallido'
+    default:
+      return value || 'No disponible'
+  }
+}
+
+function formatSimilarityProvider(value: string): string {
+  return value === 'dolos' ? 'Dolos' : value || 'No disponible'
+}
+
+function getSummaryNumber(key: string): number | null {
+  const value = similarityResult.value?.summary?.[key]
+  return typeof value === 'number' ? value : null
+}
+
+function getSimilarityLevelClasses(level: string): string {
+  switch (level) {
+    case 'high':
+      return 'border-red-200 bg-red-50 text-red-700'
+    case 'relevant':
+      return 'border-orange-200 bg-orange-50 text-orange-700'
+    case 'review':
+      return 'border-amber-200 bg-amber-50 text-amber-800'
+    default:
+      return 'border-slate-200 bg-slate-100 text-slate-700'
+  }
+}
+
+function hasRelevantSimilarityPairs(): boolean {
+  return Boolean(
+    similarityResult.value?.pairs.some((pair) => pair.level === 'relevant' || pair.level === 'high'),
+  )
+}
 </script>
 
 <template>
@@ -331,7 +372,7 @@ function formatDate(value: string | null): string {
         v-if="similarityResult || similarityError"
         class="mt-6 rounded-lg border border-slate-200 bg-white p-5"
       >
-        <h3 class="text-base font-semibold text-slate-950">Resultado del analisis de similitud</h3>
+        <h3 class="text-base font-semibold text-slate-950">Resultados de similitud entre entregas</h3>
 
         <p
           v-if="similarityError"
@@ -344,11 +385,11 @@ function formatDate(value: string | null): string {
           <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p class="text-xs font-semibold uppercase text-slate-500">Proveedor</p>
-              <p class="mt-1 font-semibold text-slate-950">{{ similarityResult.provider }}</p>
+              <p class="mt-1 font-semibold text-slate-950">{{ formatSimilarityProvider(similarityResult.provider) }}</p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p class="text-xs font-semibold uppercase text-slate-500">Estado</p>
-              <p class="mt-1 font-semibold text-slate-950">{{ similarityResult.status }}</p>
+              <p class="mt-1 font-semibold text-slate-950">{{ formatSimilarityStatus(similarityResult.status) }}</p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p class="text-xs font-semibold uppercase text-slate-500">Entregas encontradas</p>
@@ -372,6 +413,112 @@ function formatDate(value: string | null): string {
           >
             Dolos todavia no se ha ejecutado en este paso
           </p>
+
+          <div
+            v-if="similarityResult.summary"
+            class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Coincidencias normales o irrelevantes</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('normal_pairs_count') ?? 'No disponible' }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Revisar con contexto</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('review_pairs_count') ?? 'No disponible' }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Similitudes relevantes</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('relevant_pairs_count') ?? 'No disponible' }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Similitudes altas o muy sospechosas</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('high_pairs_count') ?? 'No disponible' }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="similarityResult.summary"
+            class="grid gap-3 text-sm sm:grid-cols-3"
+          >
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Pares entre alumnos</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('total_pairs_between_submissions') ?? 'No disponible' }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Mostrando principales</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('pairs_returned') ?? 'No disponible' }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Pares internos generados por Dolos</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ getSummaryNumber('total_pairs_raw') ?? 'No disponible' }}
+              </p>
+            </div>
+          </div>
+
+          <p
+            v-if="similarityResult.executed && !hasRelevantSimilarityPairs()"
+            class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600"
+          >
+            Dolos se ejecuto correctamente pero no se encontraron similitudes relevantes o altamente sospechosas entre entregas diferentes
+          </p>
+
+          <div v-if="similarityResult.output_files?.length">
+            <h4 class="text-sm font-semibold text-slate-950">Archivos generados por Dolos</h4>
+            <ul class="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              <li
+                v-for="file in similarityResult.output_files"
+                :key="file"
+                class="break-all font-mono text-xs"
+              >
+                {{ file }}
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="text-sm font-semibold text-slate-950">Pares principales para revisar</h4>
+            <div
+              v-if="similarityResult.pairs.length"
+              class="mt-3 grid gap-3"
+            >
+              <article
+                v-for="(pair, index) in similarityResult.pairs"
+                :key="`${pair.left_repository_id}-${pair.right_repository_id}-${pair.left_file}-${pair.right_file}-${index}`"
+                class="rounded-lg border border-slate-200 bg-slate-50 p-4"
+              >
+                <p class="text-sm font-semibold text-slate-950">
+                  {{ pair.left_student_name || 'Alumno A' }} vs {{ pair.right_student_name || 'Alumno B' }}
+                </p>
+                <p class="mt-2 text-sm font-semibold text-slate-700">
+                  Similitud:
+                  {{ pair.similarity_percent !== null ? `${pair.similarity_percent}%` : 'No disponible' }}
+                </p>
+                <span
+                  class="mt-3 inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold"
+                  :class="getSimilarityLevelClasses(pair.level)"
+                >
+                  Clasificacion: {{ pair.label }}
+                </span>
+                <div class="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                  <p class="break-all font-mono text-xs text-slate-700">{{ pair.left_file || 'No disponible' }}</p>
+                  <p class="break-all font-mono text-xs text-slate-700">{{ pair.right_file || 'No disponible' }}</p>
+                </div>
+              </article>
+            </div>
+          </div>
 
           <div>
             <h4 class="text-sm font-semibold text-slate-950">Entregas que se compararian</h4>

@@ -16,6 +16,9 @@ class SimilarityAnalysisResponse(BaseModel):
     message: str
     repositories_count: int
     repositories: list[SimilarityRepositoryItem]
-    pairs: list = Field(default_factory=list)
+    pairs: list[dict] = Field(default_factory=list)
     provider: str = "dolos"
     executed: bool = False
+    raw_output: str | None = None
+    output_files: list[str] = Field(default_factory=list)
+    summary: dict | None = None

@@ -12,7 +12,16 @@ from app.schemas.similarity import (
     SimilarityAnalysisResponse,
     SimilarityRepositoryItem,
 )
-from app.services.dolos_service import get_dolos_status
+from app.services.clone_service import CloneError, cleanup_repo, clone_repository
+from app.services.dolos_service import (
+    DolosError,
+    cleanup_dolos_workspace,
+    get_dolos_status,
+    prepare_dolos_submissions,
+    prepare_dolos_workspace,
+    run_dolos_analysis,
+)
+from app.services.repo_validator import validate_branch, validate_repo_url
 
 router = APIRouter()
 
@@ -77,10 +86,61 @@ def prepare_similarity_analysis(
         for repo, user in repos_with_users
     ]
 
-    return SimilarityAnalysisResponse(
-        project_id=str(project.id),
-        status="READY",
-        message="Analisis de similitud preparado para integrar Dolos",
-        repositories_count=len(repositories),
-        repositories=repositories,
-    )
+    dolos_status = get_dolos_status()
+    if not dolos_status["ready"]:
+        raise HTTPException(status_code=422, detail="Dolos no esta listo para ejecutarse")
+
+    workspace_path = ""
+    cloned_paths: list[str] = []
+
+    try:
+        workspace_path = prepare_dolos_workspace(str(project.id))
+        cloned_repositories = []
+
+        for repo, user in repos_with_users:
+            try:
+                repo_url = validate_repo_url(repo.repo_url)
+                branch = validate_branch(repo.branch)
+                cloned_path = clone_repository(repo_url, branch)
+            except (ValueError, CloneError) as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail="No se pudo clonar una de las entregas",
+                ) from exc
+
+            cloned_paths.append(cloned_path)
+            cloned_repositories.append(
+                {
+                    "repository_id": str(repo.id),
+                    "student_id": str(user.id),
+                    "student_name": user.full_name,
+                    "student_email": user.email,
+                    "repo_url": repo.repo_url,
+                    "branch": repo.branch,
+                    "path": cloned_path,
+                }
+            )
+
+        prepare_dolos_submissions(workspace_path, cloned_repositories)
+        dolos_result = run_dolos_analysis(workspace_path, cloned_repositories)
+
+        return SimilarityAnalysisResponse(
+            project_id=str(project.id),
+            status="COMPLETED",
+            message="Analisis de similitud ejecutado con Dolos",
+            repositories_count=len(repositories),
+            repositories=repositories,
+            pairs=dolos_result.get("pairs", []),
+            executed=True,
+            raw_output=dolos_result.get("raw_output"),
+            output_files=dolos_result.get("output_files", []),
+            summary=dolos_result.get("summary"),
+        )
+    except DolosError as exc:
+        raise HTTPException(status_code=500, detail="No se pudo ejecutar Dolos") from exc
+    finally:
+        for path in cloned_paths:
+            cleanup_repo(path)
+
+        if workspace_path:
+            cleanup_dolos_workspace(workspace_path)
