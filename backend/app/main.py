@@ -7,6 +7,7 @@ from app.routes.analysis_runs import router as analysis_runs_router
 from app.routes.auth import router as auth_router
 from app.routes.projects import router as projects_router
 from app.routes.repositories import router as repositories_router
+from app.routes.similarity import router as similarity_router
 
 app = FastAPI(title="EvaluaGit API")
 
@@ -24,6 +25,7 @@ app.include_router(repositories_router, prefix="/repositories", tags=["repositor
 app.include_router(analysis_router, prefix="/repositories", tags=["analysis"])
 app.include_router(ai_analysis_router, prefix="/repositories", tags=["ai-analysis"])
 app.include_router(analysis_runs_router, prefix="/analysis-runs", tags=["analysis-runs"])
+app.include_router(similarity_router, tags=["similarity"])
 
 
 @app.get("/health")
