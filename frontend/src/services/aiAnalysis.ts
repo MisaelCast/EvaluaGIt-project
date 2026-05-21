@@ -22,6 +22,17 @@ export type AiAnalysisResponse = {
   error: string | null
 }
 
+export type AiAnalysisRunResponse = {
+  id: string
+  repository_id: string
+  status: string
+  result_json: AiAnalysisResponse | null
+  error_message: string | null
+  started_at: string | null
+  finished_at: string | null
+  created_at: string
+}
+
 async function parseApiError(response: Response): Promise<string> {
   try {
     const body = await response.json()
@@ -37,7 +48,7 @@ async function parseApiError(response: Response): Promise<string> {
 
 const AI_ANALYSIS_TIMEOUT_MS = 120000
 
-export async function analyzeRepositoryWithAi(repositoryId: string): Promise<AiAnalysisResponse> {
+export async function analyzeRepositoryWithAi(repositoryId: string): Promise<AiAnalysisRunResponse> {
   const headers = await getAuthHeaders()
 
   if (!headers.Authorization) {
@@ -51,6 +62,27 @@ export async function analyzeRepositoryWithAi(repositoryId: string): Promise<AiA
       headers,
     },
     AI_ANALYSIS_TIMEOUT_MS,
+  )
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
+export async function getLatestAiAnalysis(repositoryId: string): Promise<AiAnalysisRunResponse> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesion para ver el analisis IA')
+  }
+
+  const response = await fetchWithTimeout(
+    `${API_URL}/repositories/${repositoryId}/ai-analysis/latest`,
+    {
+      headers,
+    },
   )
 
   if (!response.ok) {

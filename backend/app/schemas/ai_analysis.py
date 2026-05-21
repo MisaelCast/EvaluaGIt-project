@@ -1,6 +1,8 @@
 from typing import Any
+from datetime import datetime
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AiAnalysisResponse(BaseModel):
@@ -15,3 +17,16 @@ class AiAnalysisResponse(BaseModel):
     files_count: int | None = None
     message: str | None = None
     error: str | None = None
+
+
+class AiAnalysisRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    repository_id: UUID
+    status: str
+    result_json: dict[str, Any] | None
+    error_message: str | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime

@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import {
   analyzeRepositoryWithAi,
+  getLatestAiAnalysis,
+  type AiAnalysisRunResponse,
   type AiAnalysisResponse,
 } from '@/services/aiAnalysis'
 import {
@@ -27,9 +29,11 @@ const repositoriesError = ref('')
 const analyzingRepositoryId = ref<string | null>(null)
 const analysisResult = ref<AnalysisRunResponse | null>(null)
 const analysisError = ref('')
+const aiAnalysisRun = ref<AiAnalysisRunResponse | null>(null)
 const aiAnalysisResult = ref<AiAnalysisResponse | null>(null)
 const aiAnalysisError = ref('')
 const aiAnalyzingRepositoryId = ref<string | null>(null)
+const aiLoadingLatestRepositoryId = ref<string | null>(null)
 const failedAvatars = ref<Set<string>>(new Set())
 
 function handleAvatarError(studentId: string) {
@@ -80,6 +84,7 @@ async function handleDeleteRepository(repo: RepositoryWithStudent) {
     await deleteRepository(repo.id)
     analysisResult.value = null
     analysisError.value = ''
+    aiAnalysisRun.value = null
     aiAnalysisResult.value = null
     aiAnalysisError.value = ''
     await loadRepositories()
@@ -109,15 +114,39 @@ async function handleAnalyze(repo: RepositoryWithStudent) {
 async function handleAiAnalysis(repo: RepositoryWithStudent) {
   aiAnalyzingRepositoryId.value = repo.id
   aiAnalysisError.value = ''
+  aiAnalysisRun.value = null
   aiAnalysisResult.value = null
 
   try {
-    aiAnalysisResult.value = await analyzeRepositoryWithAi(repo.id)
+    const result = await analyzeRepositoryWithAi(repo.id)
+    aiAnalysisRun.value = result
+    aiAnalysisResult.value = result.result_json
   } catch (err) {
     aiAnalysisError.value =
       err instanceof Error ? err.message : 'No se pudo completar el analisis IA'
   } finally {
     aiAnalyzingRepositoryId.value = null
+  }
+}
+
+async function handleLatestAiAnalysis(repo: RepositoryWithStudent) {
+  aiLoadingLatestRepositoryId.value = repo.id
+  aiAnalysisError.value = ''
+  aiAnalysisRun.value = null
+  aiAnalysisResult.value = null
+
+  try {
+    const result = await getLatestAiAnalysis(repo.id)
+    aiAnalysisRun.value = result
+    aiAnalysisResult.value = result.result_json
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'No se pudo cargar el analisis IA'
+    aiAnalysisError.value =
+      message === 'No hay analisis IA para este repositorio'
+        ? 'Este repositorio aun no tiene analisis IA'
+        : message
+  } finally {
+    aiLoadingLatestRepositoryId.value = null
   }
 }
 
@@ -227,10 +256,18 @@ function formatDate(value: string | null): string {
             <button
               class="button ai-button"
               type="button"
-              :disabled="aiAnalyzingRepositoryId === repo.id"
+              :disabled="aiAnalyzingRepositoryId === repo.id || aiLoadingLatestRepositoryId === repo.id"
               @click="handleAiAnalysis(repo)"
             >
               {{ aiAnalyzingRepositoryId === repo.id ? 'Analizando con IA...' : 'Analizar con IA' }}
+            </button>
+            <button
+              class="button secondary"
+              type="button"
+              :disabled="aiAnalyzingRepositoryId === repo.id || aiLoadingLatestRepositoryId === repo.id"
+              @click="handleLatestAiAnalysis(repo)"
+            >
+              {{ aiLoadingLatestRepositoryId === repo.id ? 'Cargando IA...' : 'Ver ultimo IA' }}
             </button>
             <button
               class="button danger-button"
@@ -286,6 +323,17 @@ function formatDate(value: string | null): string {
         <h3>Resultado del analisis IA</h3>
 
         <p v-if="aiAnalysisError" class="error-text">{{ aiAnalysisError }}</p>
+
+        <div v-if="aiAnalysisRun" class="ai-meta">
+          <span><strong>Status:</strong> {{ aiAnalysisRun.status }}</span>
+          <span><strong>Creado:</strong> {{ formatDate(aiAnalysisRun.created_at) }}</span>
+          <span v-if="aiAnalysisRun.finished_at">
+            <strong>Finalizado:</strong> {{ formatDate(aiAnalysisRun.finished_at) }}
+          </span>
+          <span v-if="aiAnalysisRun.error_message" class="error-text">
+            <strong>Error:</strong> {{ aiAnalysisRun.error_message }}
+          </span>
+        </div>
 
         <div v-if="aiAnalysisResult" class="ai-data">
           <p v-if="aiAnalysisResult.enabled === false && aiAnalysisResult.message" class="muted">
