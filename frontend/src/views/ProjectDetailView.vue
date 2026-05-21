@@ -18,6 +18,10 @@ import {
   type RepositoryWithStudent,
 } from '@/services/repositories'
 import { getProject, type ProjectResponse } from '@/services/projects'
+import {
+  analyzeProjectSimilarity,
+  type SimilarityAnalysisResponse,
+} from '@/services/similarity'
 
 const route = useRoute()
 const projectId = route.params.projectId as string
@@ -35,6 +39,9 @@ const aiAnalysisResult = ref<AiAnalysisResponse | null>(null)
 const aiAnalysisError = ref('')
 const aiAnalyzingRepositoryId = ref<string | null>(null)
 const aiLoadingLatestRepositoryId = ref<string | null>(null)
+const similarityResult = ref<SimilarityAnalysisResponse | null>(null)
+const similarityError = ref('')
+const analyzingSimilarity = ref(false)
 const failedAvatars = ref<Set<string>>(new Set())
 
 function handleAvatarError(studentId: string) {
@@ -88,6 +95,8 @@ async function handleDeleteRepository(repo: RepositoryWithStudent) {
     aiAnalysisRun.value = null
     aiAnalysisResult.value = null
     aiAnalysisError.value = ''
+    similarityResult.value = null
+    similarityError.value = ''
     await loadRepositories()
   } catch (err) {
     repositoriesError.value =
@@ -151,6 +160,23 @@ async function handleLatestAiAnalysis(repo: RepositoryWithStudent) {
   }
 }
 
+async function handleSimilarityAnalysis() {
+  if (!project.value) return
+
+  analyzingSimilarity.value = true
+  similarityError.value = ''
+  similarityResult.value = null
+
+  try {
+    similarityResult.value = await analyzeProjectSimilarity(project.value.id)
+  } catch (err) {
+    similarityError.value =
+      err instanceof Error ? err.message : 'No se pudo analizar la similitud'
+  } finally {
+    analyzingSimilarity.value = false
+  }
+}
+
 function getStatusClass(status: string): string {
   switch (status) {
     case 'LINKED':
@@ -192,13 +218,29 @@ function formatDate(value: string | null): string {
     <section class="card">
       <div class="section-title">
         <h2>Entregas</h2>
-        <RouterLink
-          :to="`/projects/${projectId}/settings`"
-          class="settings-link"
-        >
-          Configurar requerimientos
-        </RouterLink>
+        <div class="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <button
+            class="button primary"
+            type="button"
+            :disabled="analyzingSimilarity || repositories.length < 2"
+            @click="handleSimilarityAnalysis"
+          >
+            {{ analyzingSimilarity ? 'Analizando similitud...' : 'Analizar similitud' }}
+          </button>
+          <RouterLink
+            :to="`/projects/${projectId}/settings`"
+            class="settings-link"
+          >
+            Configurar requerimientos
+          </RouterLink>
+        </div>
       </div>
+      <p
+        v-if="repositories.length < 2"
+        class="mb-4 text-sm text-slate-500"
+      >
+        Se necesitan al menos 2 entregas para analizar similitud
+      </p>
 
       <p v-if="repositoriesError" class="error-text">{{ repositoriesError }}</p>
 
@@ -284,6 +326,78 @@ function formatDate(value: string | null): string {
       <p v-else-if="!repositoriesError" class="muted">
         Este proyecto aun no tiene entregas de alumnos.
       </p>
+
+      <section
+        v-if="similarityResult || similarityError"
+        class="mt-6 rounded-lg border border-slate-200 bg-white p-5"
+      >
+        <h3 class="text-base font-semibold text-slate-950">Resultado del analisis de similitud</h3>
+
+        <p
+          v-if="similarityError"
+          class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {{ similarityError }}
+        </p>
+
+        <div v-if="similarityResult" class="mt-4 space-y-4">
+          <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Proveedor</p>
+              <p class="mt-1 font-semibold text-slate-950">{{ similarityResult.provider }}</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Estado</p>
+              <p class="mt-1 font-semibold text-slate-950">{{ similarityResult.status }}</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Entregas encontradas</p>
+              <p class="mt-1 font-semibold text-slate-950">{{ similarityResult.repositories_count }}</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-semibold uppercase text-slate-500">Ejecucion</p>
+              <p class="mt-1 font-semibold text-slate-950">
+                {{ similarityResult.executed ? 'Ejecutado' : 'Pendiente' }}
+              </p>
+            </div>
+          </div>
+
+          <p class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            {{ similarityResult.message }}
+          </p>
+
+          <p
+            v-if="!similarityResult.executed"
+            class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800"
+          >
+            Dolos todavia no se ha ejecutado en este paso
+          </p>
+
+          <div>
+            <h4 class="text-sm font-semibold text-slate-950">Entregas que se compararian</h4>
+            <div class="mt-3 grid gap-3">
+              <article
+                v-for="repo in similarityResult.repositories"
+                :key="repo.repository_id"
+                class="rounded-lg border border-slate-200 bg-slate-50 p-4"
+              >
+                <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p class="font-semibold text-slate-950">
+                      {{ repo.student_name || 'Alumno sin nombre' }}
+                    </p>
+                    <p class="text-sm text-slate-500">{{ repo.student_email || 'Correo no disponible' }}</p>
+                  </div>
+                  <span class="mt-1 w-fit rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                    Rama {{ repo.branch }}
+                  </span>
+                </div>
+                <p class="mt-3 break-all font-mono text-xs text-slate-600">{{ repo.repo_url }}</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div v-if="analysisResult || analysisError" class="analysis-result-section">
         <h3>Resultado del ultimo analisis</h3>
