@@ -17,6 +17,7 @@ from app.models.analysis_run import AnalysisRun  # noqa: E402, F401
 from app.models.project import Project  # noqa: E402, F401
 from app.models.project_member import ProjectMember  # noqa: E402, F401
 from app.models.repository import Repository  # noqa: E402, F401
+from app.models.similarity_run import SimilarityRun  # noqa: E402, F401
 from app.models.user import User  # noqa: E402, F401
 
 # Objeto de configuración de Alembic; permite acceder a los valores de alembic.ini.

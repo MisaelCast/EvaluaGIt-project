@@ -37,6 +37,17 @@ export type SimilarityAnalysisResponse = {
   summary?: Record<string, unknown> | null
 }
 
+export type SimilarityRunResponse = {
+  id: string
+  project_id: string
+  status: string
+  result_json: SimilarityAnalysisResponse | null
+  error_message: string | null
+  started_at: string | null
+  finished_at: string | null
+  created_at: string
+}
+
 async function parseApiError(response: Response): Promise<string> {
   try {
     const body = await response.json()
@@ -52,7 +63,7 @@ async function parseApiError(response: Response): Promise<string> {
 
 const SIMILARITY_ANALYSIS_TIMEOUT_MS = 120000
 
-export async function analyzeProjectSimilarity(projectId: string): Promise<SimilarityAnalysisResponse> {
+export async function analyzeProjectSimilarity(projectId: string): Promise<SimilarityRunResponse> {
   const headers = await getAuthHeaders()
 
   if (!headers.Authorization) {
@@ -67,6 +78,24 @@ export async function analyzeProjectSimilarity(projectId: string): Promise<Simil
     },
     SIMILARITY_ANALYSIS_TIMEOUT_MS,
   )
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+
+  return response.json()
+}
+
+export async function getLatestSimilarityAnalysis(projectId: string): Promise<SimilarityRunResponse> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesion para ver el analisis de similitud')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/similarity/latest`, {
+    headers,
+  })
 
   if (!response.ok) {
     throw new Error(await parseApiError(response))

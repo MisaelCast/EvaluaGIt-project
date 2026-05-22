@@ -1,4 +1,7 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SimilarityRepositoryItem(BaseModel):
@@ -22,3 +25,16 @@ class SimilarityAnalysisResponse(BaseModel):
     raw_output: str | None = None
     output_files: list[str] = Field(default_factory=list)
     summary: dict | None = None
+
+
+class SimilarityRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    project_id: UUID
+    status: str
+    result_json: SimilarityAnalysisResponse | None
+    error_message: str | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime

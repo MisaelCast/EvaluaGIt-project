@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AiAnalysisResult from '@/components/AiAnalysisResult.vue'
 import {
@@ -20,7 +20,8 @@ import {
 import { getProject, type ProjectResponse } from '@/services/projects'
 import {
   analyzeProjectSimilarity,
-  type SimilarityAnalysisResponse,
+  getLatestSimilarityAnalysis,
+  type SimilarityRunResponse,
 } from '@/services/similarity'
 
 const route = useRoute()
@@ -39,9 +40,11 @@ const aiAnalysisResult = ref<AiAnalysisResponse | null>(null)
 const aiAnalysisError = ref('')
 const aiAnalyzingRepositoryId = ref<string | null>(null)
 const aiLoadingLatestRepositoryId = ref<string | null>(null)
-const similarityResult = ref<SimilarityAnalysisResponse | null>(null)
+const similarityRun = ref<SimilarityRunResponse | null>(null)
 const similarityError = ref('')
 const analyzingSimilarity = ref(false)
+const loadingLatestSimilarity = ref(false)
+const similarityResult = computed(() => similarityRun.value?.result_json ?? null)
 const failedAvatars = ref<Set<string>>(new Set())
 
 function handleAvatarError(studentId: string) {
@@ -95,7 +98,7 @@ async function handleDeleteRepository(repo: RepositoryWithStudent) {
     aiAnalysisRun.value = null
     aiAnalysisResult.value = null
     aiAnalysisError.value = ''
-    similarityResult.value = null
+    similarityRun.value = null
     similarityError.value = ''
     await loadRepositories()
   } catch (err) {
@@ -165,15 +168,35 @@ async function handleSimilarityAnalysis() {
 
   analyzingSimilarity.value = true
   similarityError.value = ''
-  similarityResult.value = null
+  similarityRun.value = null
 
   try {
-    similarityResult.value = await analyzeProjectSimilarity(project.value.id)
+    similarityRun.value = await analyzeProjectSimilarity(project.value.id)
   } catch (err) {
     similarityError.value =
       err instanceof Error ? err.message : 'No se pudo analizar la similitud'
   } finally {
     analyzingSimilarity.value = false
+  }
+}
+
+async function handleLatestSimilarityAnalysis() {
+  if (!project.value) return
+
+  loadingLatestSimilarity.value = true
+  similarityError.value = ''
+  similarityRun.value = null
+
+  try {
+    similarityRun.value = await getLatestSimilarityAnalysis(project.value.id)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'No se pudo cargar el analisis de similitud'
+    similarityError.value =
+      message === 'No hay analisis de similitud para este proyecto'
+        ? 'Este proyecto aun no tiene analisis de similitud guardado'
+        : message
+  } finally {
+    loadingLatestSimilarity.value = false
   }
 }
 
@@ -204,6 +227,10 @@ function formatSimilarityStatus(value: string): string {
   switch (value) {
     case 'COMPLETED':
       return 'Completado'
+    case 'RUNNING':
+      return 'En proceso'
+    case 'PENDING':
+      return 'Pendiente'
     case 'READY':
       return 'Listo'
     case 'FAILED':
@@ -263,10 +290,18 @@ function hasRelevantSimilarityPairs(): boolean {
           <button
             class="button primary"
             type="button"
-            :disabled="analyzingSimilarity || repositories.length < 2"
+            :disabled="analyzingSimilarity || loadingLatestSimilarity || repositories.length < 2"
             @click="handleSimilarityAnalysis"
           >
             {{ analyzingSimilarity ? 'Analizando similitud...' : 'Analizar similitud' }}
+          </button>
+          <button
+            class="button secondary"
+            type="button"
+            :disabled="analyzingSimilarity || loadingLatestSimilarity"
+            @click="handleLatestSimilarityAnalysis"
+          >
+            {{ loadingLatestSimilarity ? 'Cargando similitud...' : 'Ver ultimo analisis de similitud' }}
           </button>
           <RouterLink
             :to="`/projects/${projectId}/settings`"
@@ -369,7 +404,7 @@ function hasRelevantSimilarityPairs(): boolean {
       </p>
 
       <section
-        v-if="similarityResult || similarityError"
+        v-if="similarityRun || similarityResult || similarityError"
         class="mt-6 rounded-lg border border-slate-200 bg-white p-5"
       >
         <h3 class="text-base font-semibold text-slate-950">Resultados de similitud entre entregas</h3>
@@ -381,7 +416,33 @@ function hasRelevantSimilarityPairs(): boolean {
           {{ similarityError }}
         </p>
 
+        <div
+          v-if="similarityRun"
+          class="mt-4 grid gap-3 text-sm sm:grid-cols-3"
+        >
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p class="text-xs font-semibold uppercase text-slate-500">Estado del run</p>
+            <p class="mt-1 font-semibold text-slate-950">{{ formatSimilarityStatus(similarityRun.status) }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p class="text-xs font-semibold uppercase text-slate-500">Creado</p>
+            <p class="mt-1 font-semibold text-slate-950">{{ formatDate(similarityRun.created_at) }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p class="text-xs font-semibold uppercase text-slate-500">Finalizado</p>
+            <p class="mt-1 font-semibold text-slate-950">{{ formatDate(similarityRun.finished_at) }}</p>
+          </div>
+        </div>
+
+        <p
+          v-if="similarityRun?.error_message"
+          class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {{ similarityRun.error_message }}
+        </p>
+
         <div v-if="similarityResult" class="mt-4 space-y-4">
+          <h4 class="text-sm font-semibold text-slate-950">Resultado del analisis</h4>
           <div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p class="text-xs font-semibold uppercase text-slate-500">Proveedor</p>
