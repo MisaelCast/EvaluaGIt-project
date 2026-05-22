@@ -26,12 +26,14 @@ export type ProjectCreate = {
   due_date: string | null
 }
 
-export type ProjectUpdate = {
+export type ProjectUpdateRequest = {
   name?: string
   description?: string | null
-  requirements?: ProjectRequirements
+  requirements?: Record<string, unknown>
   due_date?: string | null
 }
+
+export type ProjectUpdate = ProjectUpdateRequest
 
 async function parseApiError(response: Response): Promise<string> {
   try {
@@ -118,11 +120,11 @@ export async function createProject(data: ProjectCreate): Promise<ProjectRespons
  * Actualiza un proyecto existente
  * Solo el profesor propietario puede modificarlo
  */
-export async function updateProject(projectId: string, data: ProjectUpdate): Promise<ProjectResponse> {
+export async function updateProject(projectId: string, data: ProjectUpdateRequest): Promise<ProjectResponse> {
   const headers = await getAuthHeaders()
 
   if (!headers.Authorization) {
-    throw new Error('Inicia sesion para editar proyectos')
+    throw new Error('Inicia sesión para actualizar el proyecto')
   }
 
   const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}`, {
@@ -132,7 +134,8 @@ export async function updateProject(projectId: string, data: ProjectUpdate): Pro
   })
 
   if (!response.ok) {
-    throw new Error(await parseApiError(response))
+    const error = await parseApiError(response)
+    throw new Error(error === 'No se pudo completar la solicitud' ? 'No se pudo actualizar el proyecto' : error)
   }
 
   return response.json()

@@ -242,57 +242,51 @@ async function handleSignOut() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-neutral-50 text-slate-950 lg:grid lg:grid-cols-[280px_1fr]">
-    <aside class="border-b border-slate-200 bg-white/95 px-5 py-5 shadow-sm lg:min-h-screen lg:border-b-0 lg:border-r">
+  <main class="min-h-screen bg-neutral-50 text-slate-950 lg:grid lg:grid-cols-[240px_1fr]">
+    <aside class="border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm lg:min-h-screen lg:border-b-0 lg:border-r">
       <div class="flex items-center justify-between lg:block">
-        <RouterLink to="/dashboard" class="flex items-center gap-3">
-          <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-black text-white">E</span>
-          <span class="text-2xl font-black tracking-tight">Evalua<span class="text-emerald-600">Git</span></span>
+        <RouterLink to="/dashboard" class="flex items-center gap-2.5">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-base font-black text-white">E</span>
+          <span class="text-xl font-black tracking-tight">Evalua<span class="text-emerald-600">Git</span></span>
         </RouterLink>
       </div>
 
-      <nav class="mt-6 flex gap-2 overflow-x-auto lg:mt-10 lg:flex-col lg:overflow-visible">
-        <RouterLink to="/dashboard" class="flex min-w-fit items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100">
-            <Icon name="layout-dashboard" class="h-4 w-4" />
+      <nav class="mt-5 flex gap-2 overflow-x-auto lg:mt-8 lg:flex-col lg:overflow-visible">
+          <RouterLink to="/dashboard" class="flex min-w-fit items-center gap-2.5 rounded-xl bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-700">
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100">
+            <Icon name="home" class="h-4 w-4" />
           </span>
           Dashboard
         </RouterLink>
-        <RouterLink to="/projects" class="flex min-w-fit items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
+        <RouterLink to="/projects" class="flex min-w-fit items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200">
             <Icon name="folder" class="h-4 w-4" />
           </span>
           Proyectos
         </RouterLink>
-        <RouterLink to="/deliveries" class="flex min-w-fit items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
+        <RouterLink to="/deliveries" class="flex min-w-fit items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200">
             <Icon name="upload-cloud" class="h-4 w-4" />
           </span>
           Entregas
         </RouterLink>
-        <span class="flex min-w-fit items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-400">
-          <span class="flex items-center gap-3">
-            <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
-              <Icon name="bar-chart" class="h-4 w-4" />
-            </span>
-            Resultados
+        <span class="flex min-w-fit items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-400">
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200">
+            <Icon name="bar-chart" class="h-4 w-4" />
           </span>
-          <span class="hidden rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 lg:inline-flex">Próximamente</span>
+          Resultados
         </span>
-        <span class="flex min-w-fit items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-400">
-          <span class="flex items-center gap-3">
-            <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
-              <Icon name="settings" class="h-4 w-4" />
-            </span>
-            Configuración
+        <span class="flex min-w-fit items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-400">
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200">
+            <Icon name="settings" class="h-4 w-4" />
           </span>
-          <span class="hidden rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 lg:inline-flex">Próximamente</span>
+          Configuración
         </span>
       </nav>
 
       <button
         type="button"
-        class="mt-8 hidden w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-950 hover:bg-white hover:text-slate-950 lg:inline-flex"
+        class="mt-6 hidden w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-950 hover:bg-white hover:text-slate-950 lg:inline-flex"
         @click="handleSignOut"
       >
         Cerrar sesion
@@ -300,32 +294,32 @@ async function handleSignOut() {
     </aside>
 
     <section class="min-w-0">
-      <header class="border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur-xl lg:px-10">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <label class="relative w-full max-w-xl">
-            <Icon name="search" class="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+      <header class="border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur-xl lg:px-8">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <label class="relative w-full max-w-lg">
+            <Icon name="search" class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
               placeholder="Buscar proyectos entregas estudiantes..."
-              class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+              class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
             />
           </label>
 
-          <div class="flex items-center gap-4">
-            <div class="relative hidden h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 md:flex">
-              <Icon name="bell" class="h-5 w-5" />
-              <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">2</span>
+          <div class="flex items-center gap-3">
+            <div class="relative hidden h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 md:flex">
+              <Icon name="bell" class="h-4 w-4" />
+              <span class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">2</span>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2.5">
               <img
                 v-if="profileImageUrl"
                 :src="profileImageUrl"
                 :alt="professorName"
-                class="h-11 w-11 rounded-full object-cover ring-2 ring-white"
+                class="h-10 w-10 rounded-full object-cover ring-2 ring-white"
               />
               <div
                 v-else
-                class="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white"
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white"
               >
                 {{ initials }}
               </div>
@@ -338,7 +332,7 @@ async function handleSignOut() {
         </div>
       </header>
 
-      <div class="mx-auto max-w-7xl px-5 py-8 lg:px-10 lg:py-10">
+      <div class="mx-auto max-w-6xl px-4 py-6 lg:px-8 lg:py-7">
         <p v-if="projectsError" class="mb-8 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ projectsError }}</p>
 
         <section class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">

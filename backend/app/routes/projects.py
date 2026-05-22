@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.db.auth import get_current_user
 from app.db.deps import get_db
+from app.models.ai_analysis_run import AiAnalysisRun
 from app.models.analysis_run import AnalysisRun
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.repository import Repository
+from app.models.similarity_run import SimilarityRun
 from app.models.user import User, UserRole
 from app.schemas.project import JoinProjectRequest, ProjectCreate, ProjectResponse, ProjectUpdate
 from app.schemas.repository import RepositoryResponse
@@ -157,7 +159,11 @@ def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    if "name" in updates and updates["name"] is not None and not updates["name"].strip():
+        raise HTTPException(status_code=422, detail="El nombre del proyecto no puede estar vacío")
+
+    for field, value in updates.items():
         setattr(project, field, value)
 
     db.commit()
@@ -181,12 +187,15 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    repos = db.query(Repository).filter(Repository.project_id == project_id).all()
-    for repo in repos:
-        db.query(AnalysisRun).filter(AnalysisRun.repository_id == repo.id).delete()
+    repository_ids = [row[0] for row in db.query(Repository.id).filter(Repository.project_id == project_id).all()]
 
-    db.query(Repository).filter(Repository.project_id == project_id).delete()
-    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete()
+    if repository_ids:
+        db.query(AiAnalysisRun).filter(AiAnalysisRun.repository_id.in_(repository_ids)).delete(synchronize_session=False)
+        db.query(AnalysisRun).filter(AnalysisRun.repository_id.in_(repository_ids)).delete(synchronize_session=False)
+
+    db.query(Repository).filter(Repository.project_id == project_id).delete(synchronize_session=False)
+    db.query(SimilarityRun).filter(SimilarityRun.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete(synchronize_session=False)
     db.delete(project)
     db.commit()
 
