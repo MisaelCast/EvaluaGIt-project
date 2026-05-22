@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import type { User } from '@supabase/supabase-js'
 
 import { getCurrentUser, signOut } from '@/services/auth'
 import { getProjects, type ProjectResponse } from '@/services/projects'
 
+const router = useRouter()
 const user = ref<User | null>(null)
 const projects = ref<ProjectResponse[]>([])
 const loading = ref(true)
@@ -109,8 +110,8 @@ const statCards = computed(() => [
   {
     title: 'Entregas recibidas',
     value: 'Próximamente',
-    link: 'Ver proyectos',
-    to: '/projects',
+    link: 'Ver entregas',
+    to: '/deliveries',
     icon: 'inbox' as IconName,
     tone: 'emerald',
   },
@@ -168,9 +169,9 @@ const quickActions = [
   },
   {
     title: 'Ver entregas',
-    to: '/projects',
+    to: '/deliveries',
     icon: 'inbox' as IconName,
-    disabled: true,
+    disabled: false,
   },
   {
     title: 'Ver resultados',
@@ -233,6 +234,7 @@ async function handleSignOut() {
   try {
     await signOut()
     user.value = null
+    await router.replace('/')
   } catch {
     // ignore
   }
@@ -262,15 +264,12 @@ async function handleSignOut() {
           </span>
           Proyectos
         </RouterLink>
-        <span class="flex min-w-fit items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-400">
-          <span class="flex items-center gap-3">
-            <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
-              <Icon name="upload-cloud" class="h-4 w-4" />
-            </span>
-            Entregas
+        <RouterLink to="/deliveries" class="flex min-w-fit items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
+            <Icon name="upload-cloud" class="h-4 w-4" />
           </span>
-          <span class="hidden rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 lg:inline-flex">Próximamente</span>
-        </span>
+          Entregas
+        </RouterLink>
         <span class="flex min-w-fit items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-400">
           <span class="flex items-center gap-3">
             <span class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200">
