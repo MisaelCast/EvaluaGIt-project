@@ -187,6 +187,23 @@ export async function getJoinedProjects(): Promise<ProjectResponse[]> {
   return response.json()
 }
 
+export async function leaveJoinedProject(projectId: string): Promise<void> {
+  const headers = await getAuthHeaders()
+
+  if (!headers.Authorization) {
+    throw new Error('Inicia sesion para eliminar el proyecto')
+  }
+
+  const response = await fetchWithTimeout(`${API_URL}/projects/joined/${projectId}`, {
+    method: 'DELETE',
+    headers,
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response))
+  }
+}
+
 export async function deleteProject(projectId: string): Promise<void> {
   const headers = await getAuthHeaders()
 

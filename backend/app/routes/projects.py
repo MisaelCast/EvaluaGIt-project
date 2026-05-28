@@ -94,6 +94,40 @@ def list_joined_projects(
     return db.query(Project).filter(Project.id.in_(project_ids)).all()
 
 
+@router.delete("/joined/{project_id}", status_code=204)
+def leave_joined_project(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Solo alumnos pueden eliminar proyectos unidos")
+
+    membership = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == current_user.id,
+        ProjectMember.role == "STUDENT",
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="No estas unido a este proyecto")
+
+    repository_ids = [
+        row[0]
+        for row in db.query(Repository.id).filter(
+            Repository.project_id == project_id,
+            Repository.student_id == current_user.id,
+        ).all()
+    ]
+
+    if repository_ids:
+        db.query(AiAnalysisRun).filter(AiAnalysisRun.repository_id.in_(repository_ids)).delete(synchronize_session=False)
+        db.query(AnalysisRun).filter(AnalysisRun.repository_id.in_(repository_ids)).delete(synchronize_session=False)
+        db.query(Repository).filter(Repository.id.in_(repository_ids)).delete(synchronize_session=False)
+
+    db.delete(membership)
+    db.commit()
+
+
 @router.post("", response_model=ProjectResponse)
 def create_project(
     body: ProjectCreate,
