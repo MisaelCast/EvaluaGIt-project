@@ -1,3 +1,21 @@
+# Instituto Tecnológico de Ensenada
+
+## Ingeniería en Sistemas de Información
+
+### Backend II / Desarrollo Web II
+
+---
+
+**Semestre:** Noveno
+
+**Estudiante:** Misael Castillo Ríos
+
+**Matrícula:** 19760561
+
+**Fecha:** 31 de mayo de 2026
+
+---
+
 # EvaluaGit
 
 EvaluaGit es una plataforma web para la recepción, seguimiento y análisis académico de repositorios Git. Está pensada para profesores que revisan proyectos de programación y necesitan centralizar entregas, validar requerimientos técnicos, revisar actividad Git, obtener retroalimentación asistida por IA y comparar similitudes entre repositorios de alumnos.
