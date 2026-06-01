@@ -1,6 +1,6 @@
 # Instituto Tecnológico de Ensenada
 
-## Ingeniería en Sistemas de Información
+## Ingeniería en Sistemas Computacionales
 
 ### Backend II / Desarrollo Web II
 
